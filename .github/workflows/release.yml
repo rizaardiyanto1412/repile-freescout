@@ -35,7 +35,7 @@ jobs:
         run: |
           mkdir -p build/Repile
           git archive HEAD | tar -x -C build/Repile
-          rm -rf build/Repile/.github
+          rm -rf build/Repile/.github build/Repile/Tests
           cd build && zip -qr ../Repile.zip Repile
 
       - name: Publish the release

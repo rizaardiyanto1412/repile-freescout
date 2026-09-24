@@ -8,7 +8,7 @@ class Bot
 {
     public static function user()
     {
-        $id = (int) \Option::get('repile.bot_user_id');
+        $id = self::id();
         if ($id) {
             $user = User::find($id);
             if ($user && !$user->isDeleted()) {
@@ -21,7 +21,7 @@ class Bot
 
     public static function id()
     {
-        return (int) \Option::get('repile.bot_user_id');
+        return (int) \Option::get('repile.bot_user_id', 0, true, false);
     }
 
     public static function isBot($user_id)

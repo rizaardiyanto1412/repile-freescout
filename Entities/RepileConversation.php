@@ -35,9 +35,18 @@ class RepileConversation extends Model
         if ($base === '' || !$this->repile_thread_id) {
             return '';
         }
-        $path = $this->repile_thread_path ?: '/threads/'.rawurlencode($this->repile_thread_id);
+        $path = self::safeThreadPath($this->repile_thread_path) ?: '/threads/'.rawurlencode($this->repile_thread_id);
 
         return $base.$path;
+    }
+
+    public static function safeThreadPath($path)
+    {
+        if (!is_string($path) || !preg_match('#^/(?!/)[^@\\\\\x00-\x20\x7f]*$#', $path)) {
+            return null;
+        }
+
+        return $path;
     }
 
     public static function startWorking($conversation_id, $for)

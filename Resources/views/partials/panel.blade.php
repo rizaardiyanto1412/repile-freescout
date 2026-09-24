@@ -12,7 +12,11 @@
                         {{ __('Looking into this ticket') }}
                     @endif
                 @elseif ($record && $record->last_error)
-                    <span class="text-danger" title="{{ $record->last_error }}">{{ __('Could not reach Repile') }}</span>
+                    @if (auth()->user() && auth()->user()->isAdmin())
+                        <span class="text-danger" title="{{ $record->last_error }}">{{ __('Could not reach Repile') }}</span>
+                    @else
+                        <span class="text-danger">{{ __('Could not reach Repile') }}</span>
+                    @endif
                 @elseif ($record && $record->repile_thread_id)
                     {{ __('On this ticket') }}@if ($record->last_delivered_at) · {{ $record->last_delivered_at->diffForHumans() }}@endif
                 @else

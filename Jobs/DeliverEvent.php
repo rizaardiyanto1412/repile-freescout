@@ -7,6 +7,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Modules\Repile\Entities\RepileConversation;
+use Modules\Repile\Support\Events;
 use Modules\Repile\Support\Settings;
 
 class DeliverEvent implements ShouldQueue
@@ -21,29 +22,42 @@ class DeliverEvent implements ShouldQueue
 
     public $event;
 
+    public $conversationId;
+
+    public $refs = [];
+
     public $payload;
 
-    public function __construct($event, array $payload)
+    public function __construct($event, $conversationId, array $refs = [])
     {
         $this->event = $event;
-        $this->payload = $payload;
+        $this->conversationId = (int) $conversationId;
+        $this->refs = $refs;
     }
 
     public function handle()
     {
-        $conversation_id = (int) ($this->payload['id'] ?? 0);
+        $payload = is_array($this->payload)
+            ? $this->payload
+            : Events::payload($this->event, $this->conversationId, $this->refs);
+        $conversation_id = (int) ($payload['id'] ?? $this->conversationId);
+        if ($payload === null) {
+            if ($conversation_id) {
+                RepileConversation::stopWorking($conversation_id);
+            }
+
+            return;
+        }
         $record = RepileConversation::forConversation($conversation_id);
         $record->last_event = $this->event;
 
-        $result = self::post($this->event, $this->payload);
+        $result = self::post($this->event, $payload);
 
         if ($result['ok']) {
             $body = $result['body'];
             if (is_array($body) && !empty($body['threadId']) && is_string($body['threadId'])) {
                 $record->repile_thread_id = $body['threadId'];
-                if (!empty($body['threadPath']) && is_string($body['threadPath'])) {
-                    $record->repile_thread_path = $body['threadPath'];
-                }
+                $record->repile_thread_path = RepileConversation::safeThreadPath($body['threadPath'] ?? null);
             }
             $record->last_delivered_at = now();
             $record->last_error = null;
@@ -92,9 +106,13 @@ class DeliverEvent implements ShouldQueue
         if ($url === '' || $secret === '') {
             return ['ok' => false, 'retry' => false, 'error' => 'Repile URL or webhook secret is not set', 'body' => null];
         }
+        $problem = Settings::urlProblem(Settings::repileUrl(), Settings::allowsPrivateNetwork());
+        if ($problem !== null) {
+            return ['ok' => false, 'retry' => false, 'error' => 'Not sent: '.$problem, 'body' => null];
+        }
 
         $body = json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-        $signature = base64_encode(hash_hmac('sha1', $body, $secret, true));
+        $timestamp = (string) time();
 
         try {
             $client = new \GuzzleHttp\Client();
@@ -103,37 +121,65 @@ class DeliverEvent implements ShouldQueue
                     'Content-Type' => 'application/json',
                     'Accept' => 'application/json',
                     'X-FreeScout-Event' => $event,
-                    'X-FreeScout-Signature' => $signature,
+                    'X-FreeScout-Signature' => base64_encode(hash_hmac('sha1', $body, $secret, true)),
+                    'X-Repile-Timestamp' => $timestamp,
+                    'X-Repile-Signature' => self::signature($timestamp, $body, $secret),
+                    'X-Repile-Delivery' => self::deliveryId(),
                     'X-Repile-Module-Version' => self::version(),
                 ],
                 'body' => $body,
                 'timeout' => 30,
                 'connect_timeout' => 10,
                 'http_errors' => false,
+                'allow_redirects' => false,
                 'proxy' => config('app.proxy'),
             ]);
         } catch (\Exception $e) {
-            return ['ok' => false, 'retry' => true, 'error' => $e->getMessage(), 'body' => null];
+            \Helper::log('repile', 'Could not reach Repile for '.$event.': '.$e->getMessage());
+
+            return ['ok' => false, 'retry' => true, 'error' => 'Could not connect to Repile', 'body' => null];
         }
 
         $status = $response->getStatusCode();
-        $raw = (string) $response->getBody();
-        $decoded = json_decode($raw, true);
+        $decoded = json_decode((string) $response->getBody(), true);
 
         if ($status >= 200 && $status < 300) {
             return ['ok' => true, 'retry' => false, 'error' => '', 'body' => $decoded];
         }
 
-        $message = is_array($decoded) && !empty($decoded['error']) && is_string($decoded['error'])
-            ? $decoded['error']
-            : mb_substr($raw, 0, 300);
-
         return [
             'ok' => false,
             'retry' => $status >= 500 || $status === 429 || $status === 408,
-            'error' => 'Repile answered '.$status.($message !== '' ? ': '.$message : ''),
+            'error' => self::errorMessage($status, $decoded),
             'body' => $decoded,
         ];
+    }
+
+    public static function errorMessage($status, $decoded)
+    {
+        $message = 'Repile answered '.(int) $status;
+        if (is_array($decoded) && isset($decoded['error']) && is_string($decoded['error'])) {
+            $error = trim(preg_replace('/\s+/', ' ', strip_tags($decoded['error'])));
+            if ($error !== '') {
+                $message .= ': '.mb_substr($error, 0, 200);
+            }
+        }
+
+        return $message;
+    }
+
+    public static function signature($timestamp, $body, $secret)
+    {
+        return hash_hmac('sha256', $timestamp.'.'.$body, $secret);
+    }
+
+    private static function deliveryId()
+    {
+        $bytes = random_bytes(16);
+        $bytes[6] = chr((ord($bytes[6]) & 0x0f) | 0x40);
+        $bytes[8] = chr((ord($bytes[8]) & 0x3f) | 0x80);
+
+        return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($bytes), 4));
     }
 
     public static function version()

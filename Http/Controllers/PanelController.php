@@ -8,7 +8,6 @@ use Illuminate\Routing\Controller;
 use Modules\Repile\Entities\RepileConversation;
 use Modules\Repile\Jobs\DeliverEvent;
 use Modules\Repile\Support\Events;
-use Modules\Repile\Support\Payload;
 use Modules\Repile\Support\Settings;
 
 class PanelController extends Controller
@@ -18,7 +17,7 @@ class PanelController extends Controller
         $conversation = $this->authorizedConversation($request, $id);
         RepileConversation::startWorking($conversation->id, $request->user()->first_name);
         Events::send(Events::RECHECK, $conversation, [
-            'requestedBy' => Payload::user($request->user()),
+            'requested_by_user_id' => (int) $request->user()->id,
         ]);
 
         return response()->json(['ok' => true]);
@@ -56,6 +55,9 @@ class PanelController extends Controller
         $conversation = Conversation::findOrFail((int) $id);
         if (!$request->user()->can('view', $conversation)) {
             abort(403);
+        }
+        if (!Settings::allowsConversation($conversation)) {
+            abort(404);
         }
 
         return $conversation;
