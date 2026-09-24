@@ -126,9 +126,9 @@ class OutgoingDataTest extends RepileTestCase
             'user_id' => $this->admin->id,
         ]);
 
-        $api = $this->api('GET', '/repile/api/conversations/'.$this->conversation->id.'?_embed=threads')->getContent();
-        $event = json_encode(Events::payload(Events::CUSTOMER_REPLY, $this->conversation->id, Events::thread($thread)));
-        $mention = json_encode(Events::payload(Events::MENTION, $this->conversation->id, ['mention_thread_id' => $note->id]));
+        $api = json_encode($this->withoutLogins($this->api('GET', '/repile/api/conversations/'.$this->conversation->id.'?_embed=threads')->json()));
+        $event = json_encode($this->withoutLogins(Events::payload(Events::CUSTOMER_REPLY, $this->conversation->id, Events::thread($thread))));
+        $mention = json_encode($this->withoutLogins(Events::payload(Events::MENTION, $this->conversation->id, ['mention_thread_id' => $note->id])));
 
         foreach ([$api, $event, $mention] as $sent) {
             $this->assertStringContainsString('[redacted]', $sent);
@@ -138,6 +138,51 @@ class OutgoingDataTest extends RepileTestCase
             }
         }
         $this->assertStringContainsString('hunter2', Thread::find($thread->id)->body);
+    }
+
+    public function testLoginsTravelOnlyInTheirOwnField()
+    {
+        \Option::set('repile.redact_credentials', true);
+        $thread = $this->thread($this->conversation, ['body' => '<p>Hi, here is access.</p><p>URL: https://shop.example.com/wp-admin<br>Username: <strong>shopadmin</strong><br>Password: <strong>S3cr3t!pa55</strong></p>']);
+        $this->thread($this->conversation, ['body' => '<p>Did shopadmin work? The wp-admin page is slow.</p>']);
+
+        $expected = [['url' => 'https://shop.example.com/wp-admin', 'username' => 'shopadmin', 'password' => 'S3cr3t!pa55']];
+        $api = $this->api('GET', '/repile/api/conversations/'.$this->conversation->id.'?_embed=threads')->json();
+        $event = Events::payload(Events::CUSTOMER_REPLY, $this->conversation->id, Events::thread($thread));
+
+        foreach ([$api, $event] as $sent) {
+            $this->assertSame($expected, $sent['logins']);
+            $rest = json_encode($this->withoutLogins($sent));
+            $this->assertStringNotContainsStringIgnoringCase('S3cr3t', $rest);
+            $this->assertStringNotContainsStringIgnoringCase('shopadmin', $rest);
+            $this->assertStringContainsString('wp-admin', $rest);
+        }
+        $this->assertStringContainsString('shopadmin', Thread::find($thread->id)->body);
+    }
+
+    public function testNoLoginsFieldWhenRedactionIsOff()
+    {
+        $thread = $this->thread($this->conversation, ['body' => '<p>Username: shopadmin Password: S3cr3t!pa55</p>']);
+
+        $this->assertArrayNotHasKey('logins', $this->api('GET', '/repile/api/conversations/'.$this->conversation->id.'?_embed=threads')->json());
+        $this->assertArrayNotHasKey('logins', Events::payload(Events::CUSTOMER_REPLY, $this->conversation->id, Events::thread($thread)));
+    }
+
+    public function testLoginsIgnoreThreadsWithoutAPassword()
+    {
+        \Option::set('repile.redact_credentials', true);
+        $this->thread($this->conversation, ['body' => '<p>User: bob asked about the password reset email.</p>']);
+
+        $sent = $this->api('GET', '/repile/api/conversations/'.$this->conversation->id.'?_embed=threads')->json();
+        $this->assertSame([], $sent['logins']);
+        $this->assertStringContainsString('bob', json_encode($sent['_embedded']));
+    }
+
+    private function withoutLogins(array $payload)
+    {
+        unset($payload['logins']);
+
+        return $payload;
     }
 
     public function testExcludingNotesKeepsMentionsAndRepilesOwnNotes()
