@@ -12,7 +12,7 @@ class Bot
         if ($id) {
             $user = User::find($id);
             if ($user && !$user->isDeleted()) {
-                return $user;
+                return self::ensurePhoto($user);
             }
         }
 
@@ -53,6 +53,37 @@ class Bot
         }
 
         \Option::set('repile.bot_user_id', $user->id);
+
+        return self::ensurePhoto($user);
+    }
+
+    public static function photoUrl()
+    {
+        $user = self::id() ? User::find(self::id()) : null;
+        if ($user && !$user->isDeleted()) {
+            $user = self::ensurePhoto($user);
+        }
+        if ($user && $user->photo_url) {
+            return $user->getPhotoUrl();
+        }
+
+        return \Module::getPublicPath('repile').'/img/repile-avatar.png';
+    }
+
+    private static function ensurePhoto(User $user)
+    {
+        if ($user->photo_url) {
+            return $user;
+        }
+        try {
+            $file = $user->savePhoto(__DIR__.'/../Public/img/repile-avatar.jpg', 'image/jpeg');
+            if ($file) {
+                $user->photo_url = $file;
+                $user->save();
+            }
+        } catch (\Exception $e) {
+            \Helper::logException($e, '[Repile] avatar');
+        }
 
         return $user;
     }

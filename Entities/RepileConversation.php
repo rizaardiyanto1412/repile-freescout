@@ -16,9 +16,13 @@ class RepileConversation extends Model
         'last_delivered_at',
         'last_error',
         'last_error_at',
+        'working_since',
+        'working_for',
     ];
 
-    protected $dates = ['last_delivered_at', 'last_error_at', 'created_at', 'updated_at'];
+    public const WORKING_TIMEOUT_MINUTES = 30;
+
+    protected $dates = ['last_delivered_at', 'last_error_at', 'working_since', 'created_at', 'updated_at'];
 
     public static function forConversation($conversation_id)
     {
@@ -34,5 +38,26 @@ class RepileConversation extends Model
         $path = $this->repile_thread_path ?: '/threads/'.rawurlencode($this->repile_thread_id);
 
         return $base.$path;
+    }
+
+    public static function startWorking($conversation_id, $for)
+    {
+        $record = self::forConversation($conversation_id);
+        $record->working_since = now();
+        $record->working_for = $for !== null ? mb_substr((string) $for, 0, 191) : null;
+        $record->save();
+    }
+
+    public static function stopWorking($conversation_id)
+    {
+        self::where('conversation_id', (int) $conversation_id)
+            ->whereNotNull('working_since')
+            ->update(['working_since' => null, 'working_for' => null]);
+    }
+
+    public function isWorking()
+    {
+        return $this->working_since !== null
+            && $this->working_since->gt(now()->subMinutes(self::WORKING_TIMEOUT_MINUTES));
     }
 }

@@ -9,6 +9,7 @@ use App\Thread;
 use App\User;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Modules\Repile\Entities\RepileConversation;
 use Modules\Repile\Support\Bot;
 use Modules\Repile\Support\Payload;
 
@@ -158,8 +159,15 @@ class ApiController extends Controller
         if (!$user) {
             return response()->json(['message' => 'Unknown user'], 422);
         }
-        $body = Payload::htmlFromText($text);
         $type = (string) $request->input('type', 'note');
+        if (Bot::isBot($user->id)) {
+            $record = RepileConversation::where('conversation_id', $conversation->id)->first();
+            if ($type === 'note' && $record && $record->isWorking() && $record->working_for && strpos($text, '@') !== 0) {
+                $text = '@'.$record->working_for.' '.$text;
+            }
+            RepileConversation::stopWorking($conversation->id);
+        }
+        $body = Payload::htmlFromText($text);
 
         if ($type === 'note') {
             $conversation->createUserThread($user, $body, ['type' => Thread::TYPE_NOTE]);

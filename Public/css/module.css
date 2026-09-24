@@ -1,0 +1,26 @@
+.repile-mention{display:inline-block;padding:0 5px;border-radius:4px;background:rgba(255,95,0,.12);color:#c44400;font-weight:600}
+.repile-mention-person{background:rgba(0,111,214,.1);color:#0a5bb0}
+.repile-card{padding:14px 15px 12px}
+.repile-card-head{display:flex;align-items:center;gap:10px}
+.repile-card-avatar{width:32px;height:32px;border-radius:50%;flex-shrink:0}
+.repile-card-who{min-width:0;flex:1}
+.repile-card-name{font-weight:600;color:#2a3b47;line-height:1.2}
+.repile-card-status{font-size:12px;color:#8a9aa6;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.repile-card-open{color:#8a9aa6;padding:4px}
+.repile-card-open:hover{color:#c44400}
+.repile-card-hint{margin-top:10px;font-size:12px;color:#8a9aa6;line-height:1.5}
+.repile-live{display:inline-block;width:7px;height:7px;border-radius:50%;background:#FF5F00;margin-right:4px;vertical-align:1px;animation:repile-pulse 1.4s ease-in-out infinite}
+.repile-working .thread-person{color:#2a3b47}
+.repile-working-text{color:#8a9aa6;font-weight:400}
+.repile-dots{display:inline-flex;gap:4px;padding:6px 0}
+.repile-dots i{width:7px;height:7px;border-radius:50%;background:#b8c3cc;animation:repile-bounce 1.2s infinite ease-in-out}
+.repile-dots i:nth-child(2){animation-delay:.15s}
+.repile-dots i:nth-child(3){animation-delay:.3s}
+@keyframes repile-bounce{0%,60%,100%{transform:translateY(0);opacity:.5}30%{transform:translateY(-4px);opacity:1}}
+@keyframes repile-pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.repile-suggest{position:absolute;z-index:2000;min-width:220px;background:#fff;border:1px solid #d4dce2;border-radius:8px;box-shadow:0 8px 24px rgba(20,35,50,.14);padding:4px}
+.repile-suggest-item{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:6px;cursor:pointer}
+.repile-suggest-item.active,.repile-suggest-item:hover{background:rgba(255,95,0,.09)}
+.repile-suggest-item img{width:24px;height:24px;border-radius:50%}
+.repile-suggest-name{font-weight:600;color:#2a3b47;line-height:1.2}
+.repile-suggest-role{font-size:12px;color:#8a9aa6;line-height:1.2}

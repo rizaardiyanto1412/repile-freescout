@@ -5,7 +5,7 @@ Route::group([
     'prefix' => \Helper::getSubdirectory(),
     'namespace' => 'Modules\Repile\Http\Controllers',
 ], function () {
-    Route::post('/repile/conversations/{id}/ask', 'PanelController@ask')->name('repile.ask');
+    Route::get('/repile/conversations/{id}/state', 'PanelController@state')->name('repile.state');
     Route::post('/repile/conversations/{id}/recheck', 'PanelController@recheck')->name('repile.recheck');
     Route::post('/repile/test', ['uses' => 'PanelController@test', 'roles' => ['admin']])->name('repile.test');
 });

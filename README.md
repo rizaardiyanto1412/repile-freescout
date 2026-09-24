@@ -3,9 +3,9 @@
 A FreeScout module that connects your help desk to [Repile](https://github.com/rizaardiyanto1412/repile), the AI technical-support agent. It replaces FreeScout's paid API & Webhooks module for Repile and adds features that module cannot offer.
 
 - **Real-time sync.** New tickets, customer replies, agent replies, status changes and deletions reach Repile as they happen. A ticket's Active, Pending or Closed status shows up on its Repile thread.
-- **@Repile in notes.** Write `@Repile` in any note to ask Repile about the ticket. Repile answers with a note of its own.
-- **Repile panel.** Each conversation's sidebar links to the Repile thread, shows the last sync, and has an "Ask Repile" box and a "Check again" button.
-- **A Repile user.** Repile writes its notes and draft replies as a "Repile" user that the module creates. Repile only writes drafts; a person still sends every reply.
+- **@Repile in notes.** Tag Repile in a note the way you would tag a coworker. Typing `@Re` suggests Repile, a "Repile is looking into Riza's question" line shows while it works, and Repile answers with its own note that starts with `@Riza`. Mentions show as highlighted names.
+- **Status card.** Each conversation's sidebar shows what Repile is doing on the ticket, with a link to its Repile thread. "Ask Repile to check again" sits in the conversation's ... menu.
+- **A Repile user.** Repile writes its notes and draft replies as a "Repile" user, with its own avatar, that the module creates. Repile only writes drafts; a person still sends every reply.
 - **Retries.** Events go through FreeScout's queue. If Repile is unreachable, the module tries again after 30 seconds, then 2 minutes, 10 minutes, 30 minutes, 2 hours and 6 hours.
 
 ## Requirements
@@ -50,7 +50,7 @@ Every event is a `POST` to `{Repile URL}/api/v1/plugins/freescout/http/webhook` 
 | `convo.status` | The status changes |
 | `convo.deleted` | The conversation is deleted |
 | `repile.mention` | A note mentions `@Repile` (adds `mention.text` and `mention.user`) |
-| `repile.recheck` | Someone presses **Check again** |
+| `repile.recheck` | Someone picks **Ask Repile to check again** |
 | `repile.ping` | Someone presses **Send a test event** |
 
 Repile answers with the thread it used (`threadId`, `threadPath`), which the panel links to.

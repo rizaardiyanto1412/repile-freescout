@@ -1,34 +1,28 @@
-<div class="sidebar-block repile-panel">
-    <div class="sidebar-block-header">
-        <h3><i class="glyphicon glyphicon-flash"></i> Repile</h3>
-    </div>
-    <div class="sidebar-block-content" style="padding: 10px 15px;">
+<div class="sidebar-block repile-card">
+    <div class="repile-card-head">
+        <img class="repile-card-avatar" src="{{ \Modules\Repile\Support\Bot::photoUrl() }}" alt="">
+        <div class="repile-card-who">
+            <div class="repile-card-name">Repile</div>
+            <div class="repile-card-status">
+                @if ($record && $record->isWorking())
+                    <span class="repile-live"></span>
+                    @if ($record->working_for)
+                        {{ __('Looking into :name\'s question', ['name' => $record->working_for]) }}
+                    @else
+                        {{ __('Looking into this ticket') }}
+                    @endif
+                @elseif ($record && $record->last_error)
+                    <span class="text-danger" title="{{ $record->last_error }}">{{ __('Could not reach Repile') }}</span>
+                @elseif ($record && $record->repile_thread_id)
+                    {{ __('On this ticket') }}@if ($record->last_delivered_at) · {{ $record->last_delivered_at->diffForHumans() }}@endif
+                @else
+                    {{ __('Not on this ticket yet') }}
+                @endif
+            </div>
+        </div>
         @if ($record && $record->repile_thread_id)
-            <p>
-                <a href="{{ $record->repileUrl() }}" target="_blank" rel="noopener">{{ __('Open in Repile') }} <i class="glyphicon glyphicon-new-window"></i></a>
-            </p>
-        @else
-            <p class="text-help">{{ __('Not linked to a Repile thread yet.') }}</p>
+            <a class="repile-card-open" href="{{ $record->repileUrl() }}" target="_blank" rel="noopener" title="{{ __('Open in Repile') }}"><i class="glyphicon glyphicon-new-window"></i></a>
         @endif
-
-        @if ($record && $record->last_error)
-            <p class="text-danger small">
-                {{ __('Last delivery failed') }}: {{ \Illuminate\Support\Str::limit($record->last_error, 200) }}
-            </p>
-        @elseif ($record && $record->last_delivered_at)
-            <p class="text-help small">{{ __('Synced') }} {{ $record->last_delivered_at->diffForHumans() }}</p>
-        @endif
-
-        <form method="POST" action="{{ route('repile.ask', ['id' => $conversation->id]) }}" style="margin-bottom: 8px;">
-            {{ csrf_field() }}
-            <textarea name="question" class="form-control" rows="2" placeholder="{{ __('Ask Repile about this ticket') }}" required></textarea>
-            <button type="submit" class="btn btn-primary btn-xs" style="margin-top: 6px;">{{ __('Ask Repile') }}</button>
-            <span class="text-help small">{{ __('or write @Repile in a note') }}</span>
-        </form>
-
-        <form method="POST" action="{{ route('repile.recheck', ['id' => $conversation->id]) }}">
-            {{ csrf_field() }}
-            <button type="submit" class="btn btn-default btn-xs"><i class="glyphicon glyphicon-refresh"></i> {{ __('Check again') }}</button>
-        </form>
     </div>
+    <div class="repile-card-hint">{{ __('Mention') }} <span class="repile-mention">@Repile</span> {{ __('in a note to ask about this ticket.') }}</div>
 </div>

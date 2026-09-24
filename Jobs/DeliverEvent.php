@@ -79,6 +79,9 @@ class DeliverEvent implements ShouldQueue
             return;
         }
 
+        if ($conversation_id) {
+            RepileConversation::stopWorking($conversation_id);
+        }
         \Helper::log('repile', 'Delivery of '.$this->event.' for conversation '.$conversation_id.' failed: '.$record->last_error);
     }
 

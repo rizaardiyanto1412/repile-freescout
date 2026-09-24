@@ -4,6 +4,7 @@ namespace Modules\Repile\Support;
 
 use App\Conversation;
 use App\Thread;
+use Modules\Repile\Entities\RepileConversation;
 use Modules\Repile\Jobs\DeliverEvent;
 
 class Events
@@ -55,6 +56,9 @@ class Events
             return;
         }
         $user = $thread->created_by_user;
+        if (Settings::isConfigured()) {
+            RepileConversation::startWorking($conversation->id, $user ? $user->first_name : null);
+        }
         self::send(self::MENTION, $conversation, [
             'mention' => [
                 'threadId' => (int) $thread->id,

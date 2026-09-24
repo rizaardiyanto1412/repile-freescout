@@ -1,8 +1,8 @@
 {
     "name": "Repile",
     "alias": "repile",
-    "description": "Connects FreeScout to Repile: tickets sync in real time, @Repile in notes asks the agent, and a Repile panel sits on every conversation.",
-    "version": "0.1.0",
+    "description": "Connects FreeScout to Repile: tickets sync in real time, and you tag @Repile in a note to ask it anything, like a coworker.",
+    "version": "0.2.0",
     "detailsUrl": "https://github.com/rizaardiyanto1412/repile-freescout",
     "author": "Repile",
     "authorUrl": "https://github.com/rizaardiyanto1412/repile-freescout",

@@ -127,6 +127,43 @@ class RepileServiceProvider extends ServiceProvider
 
     private function panelHooks()
     {
+        \Eventy::addFilter('stylesheets', function ($styles) {
+            $styles[] = \Module::getPublicPath(self::ALIAS).'/css/module.css';
+
+            return $styles;
+        });
+
+        \Eventy::addFilter('javascripts', function ($javascripts) {
+            $javascripts[] = \Module::getPublicPath(self::ALIAS).'/js/module.js';
+
+            return $javascripts;
+        });
+
+        \Eventy::addAction('layout.body_bottom', function () {
+            if (auth()->check()) {
+                echo '<div id="repile-config" hidden data-avatar="'.e(Bot::photoUrl()).'"></div>';
+            }
+        });
+
+        \Eventy::addAction('conversation.before_threads', function ($conversation) {
+            if (!$conversation || !$conversation->id || !Settings::isConfigured()) {
+                return;
+            }
+            $record = RepileConversation::where('conversation_id', $conversation->id)->first();
+            if ($record && $record->isWorking()) {
+                echo \View::make(self::ALIAS.'::partials.working', [
+                    'conversation' => $conversation,
+                    'record' => $record,
+                ])->render();
+            }
+        }, 20, 1);
+
+        \Eventy::addAction('conversation.append_action_buttons', function ($conversation, $mailbox) {
+            if ($conversation && $conversation->id && Settings::isConfigured()) {
+                echo \View::make(self::ALIAS.'::partials.menu', ['conversation' => $conversation])->render();
+            }
+        }, 20, 2);
+
         \Eventy::addAction('conversation.after_prev_convs', function ($customer, $conversation, $mailbox) {
             if (!$conversation || !$conversation->id || !Settings::isConfigured()) {
                 return;
