@@ -1,0 +1,21 @@
+{
+    "name": "repile/freescout-module",
+    "description": "Repile module for FreeScout",
+    "type": "freescout-module",
+    "license": "AGPL-3.0-only",
+    "require": {
+        "php": ">=7.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\Repile\\": ""
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\Repile\\Providers\\RepileServiceProvider"
+            ]
+        }
+    }
+}

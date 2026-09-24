@@ -1,0 +1,20 @@
+{
+    "name": "Repile",
+    "alias": "repile",
+    "description": "Connects FreeScout to Repile: tickets sync in real time, @Repile in notes asks the agent, and a Repile panel sits on every conversation.",
+    "version": "0.1.0",
+    "detailsUrl": "https://github.com/rizaardiyanto1412/repile-freescout",
+    "author": "Repile",
+    "authorUrl": "https://github.com/rizaardiyanto1412/repile-freescout",
+    "requiredAppVersion": "1.8.100",
+    "license": "AGPL-3.0",
+    "providers": [
+        "Modules\\Repile\\Providers\\RepileServiceProvider"
+    ],
+    "requires": [],
+    "files": [
+        "start.php"
+    ],
+    "latestVersionUrl": "https://raw.githubusercontent.com/rizaardiyanto1412/repile-freescout/main/module.json",
+    "latestVersionZipUrl": "https://github.com/rizaardiyanto1412/repile-freescout/archive/refs/heads/main.zip"
+}
