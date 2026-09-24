@@ -2,8 +2,11 @@ name: Release
 
 on:
   push:
-    tags:
-      - "v*"
+    branches:
+      - main
+    paths:
+      - module.json
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -14,15 +17,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check the tag matches module.json
+      - name: Read the version
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           version=$(jq -r .version module.json)
-          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
-            echo "Tag $GITHUB_REF_NAME does not match module.json version $version"
-            exit 1
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+          if gh release view "v$version" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Build Repile.zip
+        if: steps.version.outputs.exists == 'false'
         run: |
           mkdir -p build/Repile
           git archive HEAD | tar -x -C build/Repile
@@ -30,8 +39,9 @@ jobs:
           cd build && zip -qr ../Repile.zip Repile
 
       - name: Publish the release
+        if: steps.version.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" Repile.zip module.json \
-            --title "$GITHUB_REF_NAME" --generate-notes
+          gh release create "${{ steps.version.outputs.tag }}" Repile.zip module.json \
+            --target "$GITHUB_SHA" --title "${{ steps.version.outputs.tag }}" --generate-notes

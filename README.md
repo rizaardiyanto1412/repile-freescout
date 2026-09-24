@@ -26,7 +26,7 @@ Updates appear on the Modules page with an **Update** button when a new release 
 
 ## Releasing
 
-Bump `version` in `module.json`, commit, then push a matching tag (for example `git tag v0.2.1 && git push origin v0.2.1`). The Release workflow builds `Repile.zip` and publishes it with `module.json`, which is where FreeScout checks for updates.
+Bump `version` in `module.json` and push to `main`. The Release workflow sees the new version, builds `Repile.zip` and publishes release `v<version>` with it and `module.json`, which is where FreeScout checks for updates. A version that already has a release is skipped.
 
 ## Connect to Repile
 
