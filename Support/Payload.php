@@ -7,6 +7,8 @@ use App\Thread;
 
 class Payload
 {
+    private static $loginCache = [];
+
     public const STATUSES = [
         Conversation::STATUS_ACTIVE => 'active',
         Conversation::STATUS_PENDING => 'pending',
@@ -45,7 +47,7 @@ class Payload
             'status' => self::statusName($conversation->status),
             'state' => (int) $conversation->state === Conversation::STATE_DELETED ? 'deleted' : 'published',
             'subject' => (string) $conversation->subject,
-            'preview' => self::outgoing((string) $conversation->preview),
+            'preview' => self::outgoingFor($conversation, (string) $conversation->preview),
             'mailboxId' => (int) $conversation->mailbox_id,
             'assignee' => $assignee ? self::user($assignee) : null,
             'customer' => $customer ? self::customer($customer, $conversation->customer_email) : null,
@@ -57,7 +59,7 @@ class Payload
 
     public static function conversationWithThreads(Conversation $conversation)
     {
-        $data = self::conversation($conversation);
+        $data = self::withLogins($conversation, self::conversation($conversation));
         $threads = Thread::where('conversation_id', $conversation->id)
             ->whereIn('state', [Thread::STATE_PUBLISHED, Thread::STATE_DRAFT])
             ->orderBy('created_at', 'desc')
@@ -95,8 +97,8 @@ class Payload
             'status' => self::statusName($thread->status),
             'createdAt' => self::time($thread->created_at),
             'createdBy' => $created_by,
-            'body' => self::outgoing((string) $thread->body),
-            'text' => self::outgoing(self::text($thread)),
+            'body' => self::outgoingFor($thread->conversation, (string) $thread->body),
+            'text' => self::outgoingFor($thread->conversation, self::text($thread)),
         ];
     }
 
@@ -112,6 +114,38 @@ class Payload
     public static function outgoing($value)
     {
         return Settings::redactsCredentials() ? Redactor::scrub($value) : $value;
+    }
+
+    public static function outgoingFor($conversation, $value)
+    {
+        if (!Settings::redactsCredentials()) {
+            return $value;
+        }
+        $value = Redactor::scrub($value);
+
+        return $conversation ? Logins::hideUsernames($value, self::logins($conversation)) : $value;
+    }
+
+    public static function withLogins(Conversation $conversation, array $data)
+    {
+        if (Settings::redactsCredentials()) {
+            $data['logins'] = self::logins($conversation);
+        }
+
+        return $data;
+    }
+
+    private static function logins(Conversation $conversation)
+    {
+        $key = (int) $conversation->id.':'.(int) $conversation->threads_count.':'.self::time($conversation->updated_at);
+        if (!isset(self::$loginCache[$key])) {
+            if (count(self::$loginCache) > 200) {
+                self::$loginCache = [];
+            }
+            self::$loginCache[$key] = Logins::forConversation($conversation);
+        }
+
+        return self::$loginCache[$key];
     }
 
     public static function user($user)
