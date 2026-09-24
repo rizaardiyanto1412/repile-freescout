@@ -44,6 +44,9 @@ class RepileServiceProvider extends ServiceProvider
                 'repile.url' => \Option::get('repile.url'),
                 'repile.webhook_secret' => \Option::get('repile.webhook_secret'),
                 'repile.mailbox_ids' => Settings::mailboxIds(),
+                'repile.allow_private_network' => Settings::allowsPrivateNetwork(),
+                'repile.redact_credentials' => Settings::redactsCredentials(),
+                'repile.exclude_notes' => Settings::excludesNotes(),
             ];
         }, 20, 2);
 
@@ -85,6 +88,13 @@ class RepileServiceProvider extends ServiceProvider
             }
             if (isset($values['repile.webhook_secret'])) {
                 $values['repile.webhook_secret'] = trim((string) $values['repile.webhook_secret']);
+            }
+            foreach (['repile.allow_private_network', 'repile.redact_credentials', 'repile.exclude_notes'] as $flag) {
+                $values[$flag] = empty($values[$flag]) ? 0 : 1;
+            }
+            $problem = Settings::urlProblem($values['repile.url'] ?? '', $values['repile.allow_private_network']);
+            if ($problem !== null) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['repile_url' => $problem]);
             }
             $values['repile.mailbox_ids'] = array_values(array_unique(array_filter(
                 array_map('intval', (array) ($values['repile.mailbox_ids'] ?? []))

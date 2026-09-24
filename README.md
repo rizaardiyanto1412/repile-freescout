@@ -31,13 +31,13 @@ Bump `version` in `module.json` and push to `main`. The Release workflow sees th
 ## Connect to Repile
 
 1. In FreeScout, open **Manage → Settings → Repile**.
-2. Enter your **Repile URL** and a **Webhook secret** (any long random string), then click **Save**. Saving creates the Repile user.
+2. Enter your **Repile URL** (it must start with `https://`) and a **Webhook secret** (any long random string), then click **Save**. Saving creates the Repile user.
 3. In Repile, open **Settings → FreeScout** and fill in:
    - **Connection:** Repile module
    - **FreeScout URL:** the value the module shows
    - **API key:** the value the module shows
    - **Webhook secret:** the same secret as in step 2
-   - **Agent FreeScout user ID:** leave empty, since Repile writes as the Repile user
+   - **Agent FreeScout user ID:** leave empty. The module only accepts writes as the Repile user and refuses any other user ID.
 4. Optional: under **Mailboxes**, tick the mailboxes Repile may work in. Leave them all unticked to include every mailbox.
 5. Back in FreeScout, click **Send a test event**. It confirms that Repile is reachable and the secret matches.
 
@@ -45,11 +45,34 @@ Bump `version` in `module.json` and push to `main`. The Release workflow sees th
 
 When some mailboxes are ticked under **Mailboxes**, the others are invisible to Repile. Their events are not sent, the API answers `404` for their conversations and leaves them out of lists and `/statuses`, and the Repile card, the "Ask Repile to check again" item and `@Repile` mentions do nothing there. A conversation moved into a ticked mailbox starts syncing on its next event; older history is not sent.
 
+### Private networks
+
+The Repile URL must use `https://` and point at a public address. If Repile runs on the same server or inside your own network, tick **Repile runs on a private network**. That allows local and private addresses, and plain `http://` for `localhost`. Without it, the module refuses to save or send to loopback, link-local (such as `169.254.169.254`) and private addresses.
+
+### Sensitive data
+
+- **Redact credentials** (off by default) replaces passwords, tokens, API keys and logins inside links with `[redacted]` in everything sent to Repile: events and API responses. FreeScout's own copy is left as it is. It catches labelled values (`Password: ...`, `senha=...`, `API key: ...`), `https://user:pass@host` and common key formats (`sk-...`, `ghp_...`, AWS access keys). It is a best guess and misses credentials written as plain sentences, so ask customers to share logins through a secret-sharing link.
+- **Keep internal notes from Repile** (off by default) leaves notes out of `?_embed=threads`, except notes that mention `@Repile` and Repile's own notes.
+
+Queued events hold only IDs. The ticket text is read when the event is sent, so it never sits in the `jobs` or `failed_jobs` tables, and a retry sends the current version.
+
 If the paid API & Webhooks module also sends webhooks to Repile, remove that webhook so Repile does not get every event twice.
 
 ## What Repile receives
 
-Every event is a `POST` to `{Repile URL}/api/v1/plugins/freescout/http/webhook` with a JSON conversation body. It carries the headers `X-FreeScout-Event` and `X-FreeScout-Signature`, where the signature is base64 HMAC-SHA1 of the body keyed by the webhook secret.
+Every event is a `POST` to `{Repile URL}/api/v1/plugins/freescout/http/webhook` with a JSON conversation body and these headers:
+
+| Header | Value |
+|---|---|
+| `X-FreeScout-Event` | The event name |
+| `X-FreeScout-Signature` | base64 HMAC-SHA1 of the body, keyed by the webhook secret (same as the paid module) |
+| `X-Repile-Timestamp` | Unix time the request was sent |
+| `X-Repile-Signature` | hex HMAC-SHA256 of `{timestamp}.{body}`, keyed by the webhook secret |
+| `X-Repile-Delivery` | A new UUID for every attempt |
+
+To stop replays, verify `X-Repile-Signature`, reject timestamps more than 5 minutes from your clock, and optionally ignore delivery IDs you have already seen. `X-FreeScout-Signature` covers only the body, so a captured request stays valid forever.
+
+If a conversation was deleted for good before its `convo.deleted` event went out, the body is just `{"id": 123, "state": "deleted"}`.
 
 | Event | Sent when |
 |---|---|
@@ -62,7 +85,7 @@ Every event is a `POST` to `{Repile URL}/api/v1/plugins/freescout/http/webhook` 
 | `repile.recheck` | Someone picks **Ask Repile to check again** |
 | `repile.ping` | Someone presses **Send a test event** |
 
-Repile answers with the thread it used (`threadId`, `threadPath`), which the panel links to.
+Repile answers with the thread it used (`threadId`, `threadPath`), which the panel links to. A `threadPath` must start with a single `/` and contain no `@`, backslash or whitespace, otherwise the link uses `/threads/{threadId}`.
 
 ## What Repile can call
 
@@ -74,10 +97,12 @@ Repile calls `{FreeScout URL}/repile/api` with the header `X-FreeScout-API-Key`:
 | `GET /conversations?mailboxId=&status=&page=` | Lists conversations |
 | `GET /conversations/{id}?_embed=threads` | Reads a conversation with its threads |
 | `POST /conversations/{id}/threads` | Adds a note (`type: note`) or replaces Repile's draft reply (`type: message`, `state: draft`) |
-| `PUT /conversations/{id}` | Changes the status or assignee |
+| `PUT /conversations/{id}` | Changes the status or assignee (`assignTo` must be someone who can be assigned in that mailbox) |
 | `POST /statuses` | Returns the status of up to 500 conversations at once |
 
 The module refuses to send replies. Repile can only write drafts.
+
+Every write is made as the Repile user. `user` (threads) and `byUser` (status and assignee) may be left out or set to the Repile user's ID; any other ID gets `422 {"message": "Repile can only act as the Repile user"}`. Notes and drafts that contain HTML are cleaned to paragraphs, line breaks, bold, italics, lists, code, quotes and `http(s)` links, so images, styles and hidden content never get stored.
 
 ## Tests
 

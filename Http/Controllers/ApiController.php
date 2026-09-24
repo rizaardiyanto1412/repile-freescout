@@ -115,7 +115,7 @@ class ApiController extends Controller
         }
         $user = $this->actingUser($request->input('byUser'));
         if (!$user) {
-            return response()->json(['message' => 'Unknown byUser'], 422);
+            return response()->json(['message' => 'Repile can only act as the Repile user'], 422);
         }
 
         $status = null;
@@ -130,6 +130,9 @@ class ApiController extends Controller
             $assignee = User::find((int) $request->input('assignTo'));
             if (!$assignee || $assignee->isDeleted()) {
                 return response()->json(['message' => 'Unknown assignTo user'], 422);
+            }
+            if (!$conversation->mailbox || !$conversation->mailbox->usersAssignable(false)->contains('id', $assignee->id)) {
+                return response()->json(['message' => 'User cannot be assigned in this mailbox'], 422);
             }
         }
         if ($status === null && $assignee === null) {
@@ -158,7 +161,7 @@ class ApiController extends Controller
         }
         $user = $this->actingUser($request->input('user'));
         if (!$user) {
-            return response()->json(['message' => 'Unknown user'], 422);
+            return response()->json(['message' => 'Repile can only act as the Repile user'], 422);
         }
         $type = (string) $request->input('type', 'note');
         if (Bot::isBot($user->id)) {
@@ -234,11 +237,11 @@ class ApiController extends Controller
 
     private function actingUser($id)
     {
-        if ($id === null || $id === '') {
-            return Bot::user();
+        $bot = Bot::user();
+        if ($id === null || $id === '' || (string) (int) $id === (string) $bot->id) {
+            return $bot;
         }
-        $user = User::find((int) $id);
 
-        return $user && !$user->isDeleted() ? $user : null;
+        return null;
     }
 }

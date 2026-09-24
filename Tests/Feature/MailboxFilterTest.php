@@ -278,7 +278,7 @@ class MailboxFilterTest extends TestCase
     private function pushedConversationIds()
     {
         return Queue::pushed(DeliverEvent::class)->map(function ($job) {
-            return (int) $job->payload['id'];
+            return (int) $job->conversationId;
         })->values()->all();
     }
 

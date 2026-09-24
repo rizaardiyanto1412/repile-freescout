@@ -13,10 +13,17 @@
         <label for="repile_url" class="col-sm-2 control-label">{{ __('Repile URL') }}</label>
         <div class="col-sm-6">
             <input id="repile_url" type="url" class="form-control input-sized-lg" name="settings[repile.url]" value="{{ old('settings.repile.url', $settings['repile.url']) }}" placeholder="https://repile.example.com">
+            @if ($errors->has('repile_url'))
+                <p class="text-danger">{{ $errors->first('repile_url') }}</p>
+            @endif
             <p class="form-help">
                 {{ __('Where Repile runs. Events go to') }}
                 <code>{{ $webhook_url ?: __('(Repile URL)').\Modules\Repile\Support\Settings::WEBHOOK_PATH }}</code>
             </p>
+            <div class="checkbox">
+                <label><input type="checkbox" name="settings[repile.allow_private_network]" value="1" @if ($settings['repile.allow_private_network']) checked @endif> {{ __('Repile runs on a private network') }}</label>
+            </div>
+            <p class="form-help">{{ __('Only tick this when Repile runs on this server or inside your own network. It allows local and private addresses, and plain http:// for localhost.') }}</p>
         </div>
     </div>
 
@@ -63,6 +70,20 @@
                 </div>
             @endforeach
             <p class="form-help">{{ __('Repile only reads and writes tickets in the mailboxes you tick, and only their events are sent to it. Tick none to include every mailbox.') }}</p>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-2 control-label">{{ __('Sensitive data') }}</label>
+        <div class="col-sm-6">
+            <div class="checkbox">
+                <label><input type="checkbox" name="settings[repile.redact_credentials]" value="1" @if ($settings['repile.redact_credentials']) checked @endif> {{ __('Redact credentials') }}</label>
+            </div>
+            <p class="form-help">{{ __('Hides passwords, tokens, keys and logins inside links (like "Password: ..." or https://user:pass@site) before tickets are sent to Repile. This is a best guess and misses credentials written as plain sentences, so ask customers to share logins through a secret-sharing link instead.') }}</p>
+            <div class="checkbox">
+                <label><input type="checkbox" name="settings[repile.exclude_notes]" value="1" @if ($settings['repile.exclude_notes']) checked @endif> {{ __('Keep internal notes from Repile') }}</label>
+            </div>
+            <p class="form-help">{{ __('Repile then only sees notes that mention @Repile and its own notes.') }}</p>
         </div>
     </div>
 

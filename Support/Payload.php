@@ -45,7 +45,7 @@ class Payload
             'status' => self::statusName($conversation->status),
             'state' => (int) $conversation->state === Conversation::STATE_DELETED ? 'deleted' : 'published',
             'subject' => (string) $conversation->subject,
-            'preview' => (string) $conversation->preview,
+            'preview' => self::outgoing((string) $conversation->preview),
             'mailboxId' => (int) $conversation->mailbox_id,
             'assignee' => $assignee ? self::user($assignee) : null,
             'customer' => $customer ? self::customer($customer, $conversation->customer_email) : null,
@@ -63,6 +63,11 @@ class Payload
             ->orderBy('created_at', 'desc')
             ->orderBy('id', 'desc')
             ->get();
+        if (Settings::excludesNotes()) {
+            $threads = $threads->filter(function ($thread) {
+                return self::sharesNote($thread);
+            });
+        }
         $data['_embedded'] = [
             'threads' => $threads->map(function ($thread) {
                 return self::thread($thread);
@@ -90,9 +95,23 @@ class Payload
             'status' => self::statusName($thread->status),
             'createdAt' => self::time($thread->created_at),
             'createdBy' => $created_by,
-            'body' => (string) $thread->body,
-            'text' => self::text($thread),
+            'body' => self::outgoing((string) $thread->body),
+            'text' => self::outgoing(self::text($thread)),
         ];
+    }
+
+    public static function sharesNote(Thread $thread)
+    {
+        if ((int) $thread->type !== Thread::TYPE_NOTE) {
+            return true;
+        }
+
+        return Bot::isBot($thread->created_by_user_id) || Events::mentionText($thread) !== null;
+    }
+
+    public static function outgoing($value)
+    {
+        return Settings::redactsCredentials() ? Redactor::scrub($value) : $value;
     }
 
     public static function user($user)
@@ -134,10 +153,24 @@ class Payload
     {
         $text = (string) $text;
         if (preg_match('#</?(p|br|div|a|ul|ol|li|strong|em|b|i|pre|code|blockquote|h[1-6]|table)\b[^>]*>#i', $text)) {
-            return $text;
+            return self::purify($text);
         }
 
         return nl2br(e($text));
+    }
+
+    public static function purify($html)
+    {
+        $config = \HTMLPurifier_Config::createDefault();
+        $config->set('Core.Encoding', 'UTF-8');
+        $config->set('Cache.DefinitionImpl', null);
+        $config->set('HTML.Allowed', 'p,br,strong,b,em,i,ul,ol,li,code,pre,blockquote,a[href]');
+        $config->set('URI.AllowedSchemes', ['http' => true, 'https' => true]);
+        $config->set('HTML.TargetBlank', true);
+        $config->set('HTML.TargetNoopener', true);
+        $config->set('HTML.TargetNoreferrer', true);
+
+        return (new \HTMLPurifier($config))->purify((string) $html);
     }
 
     private static function time($value)
