@@ -16,13 +16,17 @@ A FreeScout module that connects your help desk to [Repile](https://github.com/r
 
 ## Install
 
-1. Download the [latest zip](https://github.com/rizaardiyanto1412/repile-freescout/archive/refs/heads/main.zip).
-2. Unzip it into FreeScout's `Modules` folder and rename the folder to `Repile`, so the path is `Modules/Repile/module.json`.
+1. Download **Repile.zip** from the [latest release](https://github.com/rizaardiyanto1412/repile-freescout/releases/latest).
+2. Unzip it into FreeScout's `Modules` folder. It already contains a `Repile` folder, so you end up with `Modules/Repile/module.json`.
 3. In FreeScout, open **Manage → Modules** and click **Activate** on Repile.
 
 With Docker, copy the folder into the container and run `php artisan freescout:clear-cache` before activating.
 
-Updates appear on the Modules page with an **Update** button.
+Updates appear on the Modules page with an **Update** button when a new release is published.
+
+## Releasing
+
+Bump `version` in `module.json`, commit, then push a matching tag (for example `git tag v0.2.1 && git push origin v0.2.1`). The Release workflow builds `Repile.zip` and publishes it with `module.json`, which is where FreeScout checks for updates.
 
 ## Connect to Repile
 

@@ -1,0 +1,37 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the tag matches module.json
+        run: |
+          version=$(jq -r .version module.json)
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match module.json version $version"
+            exit 1
+          fi
+
+      - name: Build Repile.zip
+        run: |
+          mkdir -p build/Repile
+          git archive HEAD | tar -x -C build/Repile
+          rm -rf build/Repile/.github
+          cd build && zip -qr ../Repile.zip Repile
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" Repile.zip module.json \
+            --title "$GITHUB_REF_NAME" --generate-notes

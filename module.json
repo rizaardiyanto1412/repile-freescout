@@ -15,6 +15,6 @@
     "files": [
         "start.php"
     ],
-    "latestVersionUrl": "https://raw.githubusercontent.com/rizaardiyanto1412/repile-freescout/main/module.json",
-    "latestVersionZipUrl": "https://github.com/rizaardiyanto1412/repile-freescout/archive/refs/heads/main.zip"
+    "latestVersionUrl": "https://github.com/rizaardiyanto1412/repile-freescout/releases/latest/download/module.json",
+    "latestVersionZipUrl": "https://github.com/rizaardiyanto1412/repile-freescout/releases/latest/download/Repile.zip"
 }
