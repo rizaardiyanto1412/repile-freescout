@@ -43,6 +43,7 @@ class RepileServiceProvider extends ServiceProvider
             return [
                 'repile.url' => \Option::get('repile.url'),
                 'repile.webhook_secret' => \Option::get('repile.webhook_secret'),
+                'repile.mailbox_ids' => Settings::mailboxIds(),
             ];
         }, 20, 2);
 
@@ -58,6 +59,7 @@ class RepileServiceProvider extends ServiceProvider
                 'bot_user' => Bot::id() ? \App\User::find(Bot::id()) : null,
                 'last_delivery' => is_array($last) ? $last : null,
                 'paid_api_active' => \Module::isActive('apiwebhooks'),
+                'mailboxes' => \App\Mailbox::orderBy('name')->get(['id', 'name', 'email']),
             ];
             $params['settings'] = [
                 'repile.webhook_secret' => ['safe_password' => true],
@@ -84,6 +86,9 @@ class RepileServiceProvider extends ServiceProvider
             if (isset($values['repile.webhook_secret'])) {
                 $values['repile.webhook_secret'] = trim((string) $values['repile.webhook_secret']);
             }
+            $values['repile.mailbox_ids'] = array_values(array_unique(array_filter(
+                array_map('intval', (array) ($values['repile.mailbox_ids'] ?? []))
+            )));
             $request->merge(['settings' => $values]);
 
             return $request;
@@ -146,7 +151,7 @@ class RepileServiceProvider extends ServiceProvider
         });
 
         \Eventy::addAction('conversation.before_threads', function ($conversation) {
-            if (!$conversation || !$conversation->id || !Settings::isConfigured()) {
+            if (!$conversation || !$conversation->id || !Settings::isConfigured() || !Settings::allowsConversation($conversation)) {
                 return;
             }
             $record = RepileConversation::where('conversation_id', $conversation->id)->first();
@@ -159,13 +164,13 @@ class RepileServiceProvider extends ServiceProvider
         }, 20, 1);
 
         \Eventy::addAction('conversation.append_action_buttons', function ($conversation, $mailbox) {
-            if ($conversation && $conversation->id && Settings::isConfigured()) {
+            if ($conversation && $conversation->id && Settings::isConfigured() && Settings::allowsConversation($conversation)) {
                 echo \View::make(self::ALIAS.'::partials.menu', ['conversation' => $conversation])->render();
             }
         }, 20, 2);
 
         \Eventy::addAction('conversation.after_prev_convs', function ($customer, $conversation, $mailbox) {
-            if (!$conversation || !$conversation->id || !Settings::isConfigured()) {
+            if (!$conversation || !$conversation->id || !Settings::isConfigured() || !Settings::allowsConversation($conversation)) {
                 return;
             }
             try {

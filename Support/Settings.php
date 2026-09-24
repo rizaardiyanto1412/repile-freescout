@@ -28,6 +28,38 @@ class Settings
         return self::repileUrl() !== '' && self::webhookSecret() !== '';
     }
 
+    public static function mailboxIds()
+    {
+        $ids = \Option::get('repile.mailbox_ids', [], true, false);
+        if (is_string($ids)) {
+            $ids = json_decode($ids, true);
+        }
+        if (!is_array($ids)) {
+            return [];
+        }
+
+        return array_values(array_unique(array_filter(array_map('intval', $ids))));
+    }
+
+    public static function allowsMailbox($mailboxId)
+    {
+        $ids = self::mailboxIds();
+
+        return !$ids || in_array((int) $mailboxId, $ids, true);
+    }
+
+    public static function allowsConversation($conversation)
+    {
+        return $conversation && self::allowsMailbox($conversation->mailbox_id);
+    }
+
+    public static function scopeMailboxes($query, $column = 'mailbox_id')
+    {
+        $ids = self::mailboxIds();
+
+        return $ids ? $query->whereIn($column, $ids) : $query;
+    }
+
     public static function apiKey()
     {
         $key = (string) \Option::get('repile.api_key');

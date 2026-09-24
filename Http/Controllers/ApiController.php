@@ -12,6 +12,7 @@ use Illuminate\Routing\Controller;
 use Modules\Repile\Entities\RepileConversation;
 use Modules\Repile\Support\Bot;
 use Modules\Repile\Support\Payload;
+use Modules\Repile\Support\Settings;
 
 class ApiController extends Controller
 {
@@ -19,7 +20,7 @@ class ApiController extends Controller
 
     public function mailboxes()
     {
-        $mailboxes = Mailbox::orderBy('name')->get()->map(function ($mailbox) {
+        $mailboxes = Settings::scopeMailboxes(Mailbox::query(), 'id')->orderBy('name')->get()->map(function ($mailbox) {
             return [
                 'id' => (int) $mailbox->id,
                 'name' => (string) $mailbox->name,
@@ -32,7 +33,7 @@ class ApiController extends Controller
 
     public function conversations(Request $request)
     {
-        $query = Conversation::where('state', Conversation::STATE_PUBLISHED);
+        $query = $this->publishedConversations();
         if ($request->filled('mailboxId')) {
             $query->where('mailbox_id', (int) $request->input('mailboxId'));
         }
@@ -86,8 +87,8 @@ class ApiController extends Controller
         if (count($ids) > 500) {
             return response()->json(['message' => 'At most 500 ids'], 422);
         }
-        $found = Conversation::whereIn('id', $ids)
-            ->where('state', Conversation::STATE_PUBLISHED)
+        $found = $this->publishedConversations()
+            ->whereIn('id', $ids)
             ->get(['id', 'status']);
         $drafts = Thread::whereIn('conversation_id', $found->pluck('id')->all())
             ->where('state', Thread::STATE_DRAFT)
@@ -223,12 +224,12 @@ class ApiController extends Controller
 
     private function findConversation($id)
     {
-        $conversation = Conversation::find((int) $id);
-        if (!$conversation || (int) $conversation->state !== Conversation::STATE_PUBLISHED) {
-            return null;
-        }
+        return $this->publishedConversations()->where('id', (int) $id)->first();
+    }
 
-        return $conversation;
+    private function publishedConversations()
+    {
+        return Settings::scopeMailboxes(Conversation::where('state', Conversation::STATE_PUBLISHED));
     }
 
     private function actingUser($id)

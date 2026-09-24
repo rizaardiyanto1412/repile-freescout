@@ -38,7 +38,12 @@ Bump `version` in `module.json` and push to `main`. The Release workflow sees th
    - **API key:** the value the module shows
    - **Webhook secret:** the same secret as in step 2
    - **Agent FreeScout user ID:** leave empty, since Repile writes as the Repile user
-4. Back in FreeScout, click **Send a test event**. It confirms that Repile is reachable and the secret matches.
+4. Optional: under **Mailboxes**, tick the mailboxes Repile may work in. Leave them all unticked to include every mailbox.
+5. Back in FreeScout, click **Send a test event**. It confirms that Repile is reachable and the secret matches.
+
+### Keeping mailboxes away from Repile
+
+When some mailboxes are ticked under **Mailboxes**, the others are invisible to Repile. Their events are not sent, the API answers `404` for their conversations and leaves them out of lists and `/statuses`, and the Repile card, the "Ask Repile to check again" item and `@Repile` mentions do nothing there. A conversation moved into a ticked mailbox starts syncing on its next event; older history is not sent.
 
 If the paid API & Webhooks module also sends webhooks to Repile, remove that webhook so Repile does not get every event twice.
 
@@ -65,7 +70,7 @@ Repile calls `{FreeScout URL}/repile/api` with the header `X-FreeScout-API-Key`:
 
 | Call | Does |
 |---|---|
-| `GET /mailboxes` | Lists mailboxes |
+| `GET /mailboxes` | Lists the mailboxes Repile may use |
 | `GET /conversations?mailboxId=&status=&page=` | Lists conversations |
 | `GET /conversations/{id}?_embed=threads` | Reads a conversation with its threads |
 | `POST /conversations/{id}/threads` | Adds a note (`type: note`) or replaces Repile's draft reply (`type: message`, `state: draft`) |
@@ -73,6 +78,16 @@ Repile calls `{FreeScout URL}/repile/api` with the header `X-FreeScout-API-Key`:
 | `POST /statuses` | Returns the status of up to 500 conversations at once |
 
 The module refuses to send replies. Repile can only write drafts.
+
+## Tests
+
+The feature tests in `Tests/` run inside a FreeScout checkout with its dev dependencies installed and a test database configured:
+
+```
+vendor/bin/phpunit --stderr Modules/Repile/Tests
+```
+
+`--stderr` matters: FreeScout's middleware sends headers directly, which fails once PHPUnit has printed to stdout.
 
 ## License
 

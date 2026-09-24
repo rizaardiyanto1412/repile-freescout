@@ -27,6 +27,9 @@ class Events
         if ((int) $conversation->state === Conversation::STATE_DRAFT) {
             return;
         }
+        if (!Settings::allowsConversation($conversation)) {
+            return;
+        }
         $payload = array_merge(Payload::conversation($conversation), $extra);
         DeliverEvent::dispatch($event, $payload)->onQueue('default');
     }
@@ -48,7 +51,7 @@ class Events
 
     public static function noteAdded(Conversation $conversation, Thread $thread)
     {
-        if (Bot::isBot($thread->created_by_user_id)) {
+        if (Bot::isBot($thread->created_by_user_id) || !Settings::allowsConversation($conversation)) {
             return;
         }
         $text = self::mentionText($thread);

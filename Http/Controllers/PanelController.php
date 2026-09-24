@@ -57,6 +57,9 @@ class PanelController extends Controller
         if (!$request->user()->can('view', $conversation)) {
             abort(403);
         }
+        if (!Settings::allowsConversation($conversation)) {
+            abort(404);
+        }
 
         return $conversation;
     }

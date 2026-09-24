@@ -8,5 +8,6 @@ return [
         'repile.api_key' => ['default' => ''],
         'repile.bot_user_id' => ['default' => ''],
         'repile.last_delivery' => ['default' => ''],
+        'repile.mailbox_ids' => ['default' => []],
     ],
 ];

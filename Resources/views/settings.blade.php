@@ -52,6 +52,21 @@
     </div>
 
     <div class="form-group">
+        <label class="col-sm-2 control-label">{{ __('Mailboxes') }}</label>
+        <div class="col-sm-6">
+            @foreach ($mailboxes as $mailbox)
+                <div class="checkbox">
+                    <label>
+                        <input type="checkbox" name="settings[repile.mailbox_ids][]" value="{{ $mailbox->id }}" @if (in_array((int) $mailbox->id, $settings['repile.mailbox_ids'], true)) checked @endif>
+                        {{ $mailbox->name }} <span class="text-help">{{ $mailbox->email }}</span>
+                    </label>
+                </div>
+            @endforeach
+            <p class="form-help">{{ __('Repile only reads and writes tickets in the mailboxes you tick, and only their events are sent to it. Tick none to include every mailbox.') }}</p>
+        </div>
+    </div>
+
+    <div class="form-group">
         <label class="col-sm-2 control-label">{{ __('Repile user') }}</label>
         <div class="col-sm-6">
             <p class="form-control-static">
