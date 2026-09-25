@@ -5,7 +5,7 @@ A FreeScout module that connects your help desk to [Repile](https://github.com/r
 - **Real-time sync.** New tickets, customer replies, agent replies, status changes and deletions reach Repile as they happen. A ticket's Active, Pending or Closed status shows up on its Repile thread.
 - **@Repile in notes.** Tag Repile in a note the way you would tag a coworker. Typing `@Re` suggests Repile, a "Repile is looking into Riza's question" line shows while it works, and Repile answers with its own note that starts with `@Riza`. Mentions show as highlighted names.
 - **Status card.** Each conversation's sidebar shows what Repile is doing on the ticket, with a link to its Repile thread. "Ask Repile to check again" sits in the conversation's ... menu.
-- **A Repile user.** Repile writes its notes and draft replies as a "Repile" user, with its own avatar, that the module creates. Repile only writes drafts; a person still sends every reply.
+- **A Repile user.** Repile writes its notes and draft replies as a "Repile" user, with its own avatar, that the module creates. Repile only writes drafts; a person still sends every reply, in FreeScout or with **Press send** in Repile.
 - **Retries.** Events go through FreeScout's queue. If Repile is unreachable, the module tries again after 30 seconds, then 2 minutes, 10 minutes, 30 minutes, 2 hours and 6 hours.
 
 ## Requirements
@@ -97,10 +97,11 @@ Repile calls `{FreeScout URL}/repile/api` with the header `X-FreeScout-API-Key`:
 | `GET /conversations?mailboxId=&status=&page=` | Lists conversations |
 | `GET /conversations/{id}?_embed=threads` | Reads a conversation with its threads |
 | `POST /conversations/{id}/threads` | Adds a note (`type: note`) or replaces Repile's draft reply (`type: message`, `state: draft`) |
+| `POST /conversations/{id}/threads/{threadId}/send` | Sends Repile's draft reply to the customer, optionally with new `text`. Only works on a draft the Repile user wrote and nobody edited in FreeScout |
 | `PUT /conversations/{id}` | Changes the status or assignee (`assignTo` must be someone who can be assigned in that mailbox) |
 | `POST /statuses` | Returns the status of up to 500 conversations at once |
 
-The module refuses to send replies. Repile can only write drafts.
+Repile never sends on its own. The send call exists for the **Press send** button on the draft card in Repile, so a person still sends every reply, either there or in FreeScout. It refuses any thread that is not Repile's own unedited draft.
 
 Every write is made as the Repile user. `user` (threads) and `byUser` (status and assignee) may be left out or set to the Repile user's ID; any other ID gets `422 {"message": "Repile can only act as the Repile user"}`. Notes and drafts that contain HTML are cleaned to paragraphs, line breaks, bold, italics, lists, code, quotes and `http(s)` links, so images, styles and hidden content never get stored.
 

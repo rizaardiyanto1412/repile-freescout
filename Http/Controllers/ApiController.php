@@ -193,6 +193,47 @@ class ApiController extends Controller
         return response()->json(['message' => 'The Repile module only creates notes and draft replies'], 422);
     }
 
+    public function sendDraft(Request $request, $id, $threadId)
+    {
+        $conversation = $this->findConversation($id);
+        if (!$conversation) {
+            return response()->json(['message' => 'Conversation not found'], 404);
+        }
+        $user = $this->actingUser($request->input('user'));
+        if (!$user) {
+            return response()->json(['message' => 'Repile can only act as the Repile user'], 422);
+        }
+        $draft = Thread::where('id', (int) $threadId)
+            ->where('conversation_id', $conversation->id)
+            ->where('type', Thread::TYPE_MESSAGE)
+            ->where('state', Thread::STATE_DRAFT)
+            ->where('created_by_user_id', $user->id)
+            ->whereNull('edited_by_user_id')
+            ->first();
+        if (!$draft) {
+            return response()->json(['message' => 'Draft not found. It was sent, deleted or edited in FreeScout.'], 404);
+        }
+        $text = trim((string) $request->input('text', ''));
+        $body = $text === '' ? $draft->body : Payload::htmlFromText($text);
+
+        $draft->delete();
+        $hasOtherDrafts = Thread::where('conversation_id', $conversation->id)
+            ->where('state', Thread::STATE_DRAFT)
+            ->exists();
+        if (!$hasOtherDrafts) {
+            $conversation->removeFromFolder(Folder::TYPE_DRAFTS);
+        }
+        $conversation->createUserThread($user, $body, ['type' => Thread::TYPE_MESSAGE]);
+        $sent = Thread::where('conversation_id', $conversation->id)
+            ->where('type', Thread::TYPE_MESSAGE)
+            ->where('state', Thread::STATE_PUBLISHED)
+            ->where('created_by_user_id', $user->id)
+            ->orderBy('id', 'desc')
+            ->first();
+
+        return response()->json(['id' => $sent ? (int) $sent->id : null], 201);
+    }
+
     private function replaceDraft(Conversation $conversation, User $user, $body)
     {
         Thread::where('conversation_id', $conversation->id)

@@ -20,5 +20,6 @@ Route::group([
     Route::get('/conversations/{id}', 'ApiController@conversation')->where('id', '[0-9]+');
     Route::put('/conversations/{id}', 'ApiController@updateConversation')->where('id', '[0-9]+');
     Route::post('/conversations/{id}/threads', 'ApiController@createThread')->where('id', '[0-9]+');
+    Route::post('/conversations/{id}/threads/{threadId}/send', 'ApiController@sendDraft')->where(['id' => '[0-9]+', 'threadId' => '[0-9]+']);
     Route::post('/statuses', 'ApiController@statuses');
 });
