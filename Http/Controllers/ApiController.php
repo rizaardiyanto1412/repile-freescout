@@ -2,6 +2,7 @@
 
 namespace Modules\Repile\Http\Controllers;
 
+use App\Attachment;
 use App\Conversation;
 use App\Folder;
 use App\Mailbox;
@@ -79,6 +80,32 @@ class ApiController extends Controller
             : Payload::conversation($conversation);
 
         return response()->json($data);
+    }
+
+    public function attachment($id, $attachmentId)
+    {
+        $conversation = $this->findConversation($id);
+        if (!$conversation) {
+            return response()->json(['message' => 'Conversation not found'], 404);
+        }
+        $attachment = Attachment::where('id', (int) $attachmentId)->first();
+        $thread = $attachment ? Thread::where('id', (int) $attachment->thread_id)
+            ->where('conversation_id', $conversation->id)
+            ->whereIn('state', [Thread::STATE_PUBLISHED, Thread::STATE_DRAFT])
+            ->first() : null;
+        if (!$thread || (Settings::excludesNotes() && !Payload::sharesNote($thread))) {
+            return response()->json(['message' => 'Attachment not found'], 404);
+        }
+        if (!$attachment->fileExists()) {
+            return response()->json(['message' => 'The attachment file is missing in FreeScout'], 410);
+        }
+
+        return response($attachment->getFileContents(), 200, [
+            'Content-Type' => $attachment->mime_type ?: 'application/octet-stream',
+            'Content-Disposition' => 'attachment; filename="'.addcslashes(\Str::ascii((string) $attachment->file_name), '"\\').'"',
+            'X-Content-Type-Options' => 'nosniff',
+            'Cache-Control' => 'no-store',
+        ]);
     }
 
     public function statuses(Request $request)
