@@ -48,7 +48,7 @@ class Events
         if (!Settings::allowsConversation($conversation)) {
             return null;
         }
-        $payload = Payload::conversation($conversation);
+        $payload = Payload::withLogins($conversation, Payload::conversation($conversation));
         if (!empty($refs['thread_id'])) {
             $thread = Thread::find((int) $refs['thread_id']);
             if ($thread) {
@@ -64,7 +64,7 @@ class Events
             $user = $thread->created_by_user;
             $payload['mention'] = [
                 'threadId' => (int) $thread->id,
-                'text' => Payload::outgoing($text),
+                'text' => Payload::outgoingFor($conversation, $text),
                 'user' => $user ? Payload::user($user) : null,
             ];
         }

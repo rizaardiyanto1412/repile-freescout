@@ -54,13 +54,13 @@ class RepileServiceProvider extends ServiceProvider
             if ($section !== self::ALIAS) {
                 return $params;
             }
-            $last = json_decode((string) \Option::get('repile.last_delivery'), true);
             $params['template_vars'] = [
                 'api_key' => Settings::apiKey(),
+                'webhook_secret' => Settings::webhookSecretOrCreate(),
                 'api_url' => Settings::apiBaseUrl(),
                 'webhook_url' => Settings::webhookUrl(),
                 'bot_user' => Bot::id() ? \App\User::find(Bot::id()) : null,
-                'last_delivery' => is_array($last) ? $last : null,
+                'last_delivery' => Settings::lastDelivery(),
                 'paid_api_active' => \Module::isActive('apiwebhooks'),
                 'mailboxes' => \App\Mailbox::orderBy('name')->get(['id', 'name', 'email']),
             ];
@@ -79,8 +79,11 @@ class RepileServiceProvider extends ServiceProvider
             if ($section !== self::ALIAS) {
                 return $request;
             }
-            if ($request->filled('repile_regenerate_key')) {
+            if ($request->input('repile_regenerate') === 'api_key') {
                 Settings::regenerateApiKey();
+            }
+            if ($request->input('repile_regenerate') === 'webhook_secret') {
+                Settings::regenerateWebhookSecret();
             }
             $values = $request->settings ?? [];
             if (isset($values['repile.url'])) {
@@ -96,7 +99,7 @@ class RepileServiceProvider extends ServiceProvider
             if ($problem !== null) {
                 throw \Illuminate\Validation\ValidationException::withMessages(['repile_url' => $problem]);
             }
-            $values['repile.mailbox_ids'] = array_values(array_unique(array_filter(
+            $values['repile.mailbox_ids'] = $request->input('repile_mailbox_scope') === 'all' ? [] : array_values(array_unique(array_filter(
                 array_map('intval', (array) ($values['repile.mailbox_ids'] ?? []))
             )));
             $request->merge(['settings' => $values]);
