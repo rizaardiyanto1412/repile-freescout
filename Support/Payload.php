@@ -2,6 +2,7 @@
 
 namespace Modules\Repile\Support;
 
+use App\Attachment;
 use App\Conversation;
 use App\Thread;
 
@@ -99,7 +100,30 @@ class Payload
             'createdBy' => $created_by,
             'body' => self::outgoingFor($thread->conversation, (string) $thread->body),
             'text' => self::outgoingFor($thread->conversation, self::text($thread)),
+            'attachments' => self::attachments($thread),
         ];
+    }
+
+    public static function attachments(Thread $thread)
+    {
+        return self::threadAttachments($thread)->map(function ($attachment) {
+            return [
+                'id' => (int) $attachment->id,
+                'fileName' => (string) $attachment->file_name,
+                'mimeType' => (string) $attachment->mime_type,
+                'size' => (int) $attachment->size,
+                'inline' => (bool) $attachment->embedded,
+            ];
+        })->values()->all();
+    }
+
+    private static function threadAttachments(Thread $thread)
+    {
+        if (!$thread->has_attachments && strpos((string) $thread->body, '<img') === false) {
+            return collect();
+        }
+
+        return Attachment::where('thread_id', $thread->id)->orderBy('id')->get();
     }
 
     public static function sharesNote(Thread $thread)
@@ -178,9 +202,29 @@ class Payload
         if ($body === '') {
             return '';
         }
-        $text = \Helper::htmlToText($body);
+        $text = \Helper::htmlToText(self::markImages($body, self::threadAttachments($thread)));
 
         return trim(html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+    }
+
+    private static function markImages($html, $attachments)
+    {
+        return preg_replace_callback('#<img\b[^>]*>#i', function ($match) use ($attachments) {
+            $attachment = null;
+            if (preg_match('#[?&](?:amp;)?id=(\d+)#', $match[0], $id)) {
+                $attachment = $attachments->first(function ($candidate) use ($id) {
+                    return (int) $candidate->id === (int) $id[1];
+                });
+            }
+            if ($attachment) {
+                return ' [image: '.e($attachment->file_name).', attachment '.(int) $attachment->id.'] ';
+            }
+            if (preg_match('#\balt\s*=\s*"([^"]+)"#i', $match[0], $alt)) {
+                return ' [image: '.e(html_entity_decode($alt[1], ENT_QUOTES | ENT_HTML5, 'UTF-8')).'] ';
+            }
+
+            return ' [image] ';
+        }, $html);
     }
 
     public static function htmlFromText($text)

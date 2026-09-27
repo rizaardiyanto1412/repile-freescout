@@ -93,7 +93,8 @@ Repile calls `{FreeScout URL}/repile/api` with the header `X-FreeScout-API-Key`:
 |---|---|
 | `GET /mailboxes` | Lists the mailboxes Repile may use |
 | `GET /conversations?mailboxId=&status=&page=` | Lists conversations |
-| `GET /conversations/{id}?_embed=threads` | Reads a conversation with its threads |
+| `GET /conversations/{id}?_embed=threads` | Reads a conversation with its threads. Each thread lists its `attachments` (`id`, `fileName`, `mimeType`, `size`, `inline`), and inline images show in `text` as `[image: name, attachment id]` |
+| `GET /conversations/{id}/attachments/{attachmentId}` | Downloads one attachment of that conversation. Attachments on hidden internal notes are refused |
 | `POST /conversations/{id}/threads` | Adds a note (`type: note`) or replaces Repile's draft reply (`type: message`, `state: draft`) |
 | `POST /conversations/{id}/threads/{threadId}/send` | Sends Repile's draft reply to the customer, optionally with new `text`. Only works on a draft the Repile user wrote and nobody edited in FreeScout |
 | `PUT /conversations/{id}` | Changes the status or assignee (`assignTo` must be someone who can be assigned in that mailbox) |
