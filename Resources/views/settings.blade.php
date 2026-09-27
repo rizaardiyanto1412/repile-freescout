@@ -79,7 +79,7 @@
             <div class="checkbox">
                 <label><input type="checkbox" name="settings[repile.redact_credentials]" value="1" @if ($settings['repile.redact_credentials']) checked @endif> {{ __('Redact credentials') }}</label>
             </div>
-            <p class="form-help">{{ __('Hides passwords, tokens, keys and logins inside links (like "Password: ..." or https://user:pass@site) before tickets are sent to Repile. This is a best guess and misses credentials written as plain sentences, so ask customers to share logins through a secret-sharing link instead.') }}</p>
+            <p class="form-help">{{ __('Hides passwords, tokens, keys and logins inside links (like "Password: ..." or https://user:pass@site) before tickets are sent to Repile. A site login (username, password and login URL) is also sent once in a separate field, which Repile stores encrypted so its AI can log in without seeing it. This is a best guess and misses credentials written as plain sentences, so ask customers to share logins through a secret-sharing link instead.') }}</p>
             <div class="checkbox">
                 <label><input type="checkbox" name="settings[repile.exclude_notes]" value="1" @if ($settings['repile.exclude_notes']) checked @endif> {{ __('Keep internal notes from Repile') }}</label>
             </div>

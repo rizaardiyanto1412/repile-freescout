@@ -52,6 +52,7 @@ The Repile URL must use `https://` and point at a public address. If Repile runs
 ### Sensitive data
 
 - **Redact credentials** (off by default) replaces passwords, tokens, API keys and logins inside links with `[redacted]` in everything sent to Repile: events and API responses. FreeScout's own copy is left as it is. It catches labelled values (`Password: ...`, `senha=...`, `API key: ...`), `https://user:pass@host` and common key formats (`sk-...`, `ghp_...`, AWS access keys). It is a best guess and misses credentials written as plain sentences, so ask customers to share logins through a secret-sharing link.
+  When a labelled password is found, the username next to it (`Username:`, `User:`, `Email:`, `Login:`) is redacted too, and the login travels once in a separate `logins` field (`url`, `username`, `password`) on events and on `GET /conversations/{id}?_embed=threads`. Repile stores that field encrypted and never shows it to its AI; the agent gets it only as a file its scripts can read.
 - **Keep internal notes from Repile** (off by default) leaves notes out of `?_embed=threads`, except notes that mention `@Repile` and Repile's own notes.
 
 Queued events hold only IDs. The ticket text is read when the event is sent, so it never sits in the `jobs` or `failed_jobs` tables, and a retry sends the current version.
