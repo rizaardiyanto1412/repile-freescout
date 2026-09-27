@@ -56,6 +56,34 @@ class ApiWritesTest extends RepileTestCase
         $this->assertSame(2, Thread::where('conversation_id', $this->conversation->id)->where('state', Thread::STATE_DRAFT)->count());
     }
 
+    public function testSendPublishesOnlyTheBotsUneditedDraft()
+    {
+        $draftId = $this->api('POST', $this->threadsUri(), ['type' => 'message', 'state' => 'draft', 'text' => 'Here is the fix'])
+            ->assertStatus(201)->json()['id'];
+        $human = $this->thread($this->conversation, [
+            'type' => Thread::TYPE_MESSAGE,
+            'state' => Thread::STATE_DRAFT,
+            'created_by_user_id' => $this->admin->id,
+            'created_by_customer_id' => null,
+            'user_id' => $this->admin->id,
+            'source_via' => Thread::PERSON_USER,
+            'body' => 'My own draft',
+        ]);
+
+        $this->api('POST', $this->threadsUri().'/'.$human->id.'/send')->assertStatus(404);
+        $this->api('POST', $this->threadsUri().'/'.$draftId.'/send', ['user' => $this->admin->id])->assertStatus(422);
+
+        $sentId = $this->api('POST', $this->threadsUri().'/'.$draftId.'/send')->assertStatus(201)->json()['id'];
+        $sent = Thread::find($sentId);
+        $this->assertSame(Thread::STATE_PUBLISHED, (int) $sent->state);
+        $this->assertSame((int) $this->bot()->id, (int) $sent->created_by_user_id);
+        $this->assertStringContainsString('Here is the fix', $sent->body);
+        $this->assertNull(Thread::find($draftId));
+        $this->assertNotNull(Thread::find($human->id));
+
+        $this->api('POST', $this->threadsUri().'/'.$draftId.'/send')->assertStatus(404);
+    }
+
     public function testStatusChangesAreCreditedToTheBotOnly()
     {
         $bot = $this->bot();
