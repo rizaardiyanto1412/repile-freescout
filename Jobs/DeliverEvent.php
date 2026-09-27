@@ -65,11 +65,11 @@ class DeliverEvent implements ShouldQueue
             if ($conversation_id) {
                 $record->save();
             }
-            \Option::set('repile.last_delivery', json_encode([
+            \Option::set('repile.last_delivery', [
                 'event' => $this->event,
                 'ok' => true,
                 'at' => now()->toIso8601String(),
-            ]));
+            ]);
 
             return;
         }
@@ -79,12 +79,12 @@ class DeliverEvent implements ShouldQueue
         if ($conversation_id) {
             $record->save();
         }
-        \Option::set('repile.last_delivery', json_encode([
+        \Option::set('repile.last_delivery', [
             'event' => $this->event,
             'ok' => false,
             'error' => $record->last_error,
             'at' => now()->toIso8601String(),
-        ]));
+        ]);
 
         $attempt = $this->attempts();
         if ($result['retry'] && $attempt < $this->tries) {

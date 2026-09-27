@@ -172,6 +172,42 @@
 		});
 	});
 
+	$(document).on('click', '[data-repile-copy]', function () {
+		var button = $(this);
+		var input = $(button.attr('data-repile-copy'))[0];
+		if (!input) {
+			return;
+		}
+		input.select();
+		var done = function () {
+			var label = button.text();
+			button.text('Copied');
+			setTimeout(function () {
+				button.text(label);
+			}, 1500);
+		};
+		if (navigator.clipboard && window.isSecureContext) {
+			navigator.clipboard.writeText(input.value).then(done);
+		} else {
+			document.execCommand('copy');
+			done();
+		}
+	});
+
+	$(document).on('click', '[data-repile-regenerate]', function () {
+		var button = $(this);
+		if (!window.confirm(button.attr('data-repile-confirm'))) {
+			return;
+		}
+		var form = button.closest('form');
+		form.find('input[name="repile_regenerate"]').val(button.attr('data-repile-regenerate'));
+		form.submit();
+	});
+
+	$(document).on('change', 'input[name="repile_mailbox_scope"]', function () {
+		$('[data-repile-mailboxes]').prop('hidden', this.value === 'all');
+	});
+
 	$(function () {
 		$('.thread-type-note .thread-body').each(function () {
 			highlightMentions(this);

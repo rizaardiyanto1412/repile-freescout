@@ -30,30 +30,27 @@ Bump `version` in `module.json` and push to `main`. The Release workflow sees th
 
 ## Connect to Repile
 
-1. In FreeScout, open **Manage → Settings → Repile**.
-2. Enter your **Repile URL** (it must start with `https://`) and a **Webhook secret** (any long random string), then click **Save**. Saving creates the Repile user.
-3. In Repile, open **Settings → FreeScout** and fill in:
-   - **Connection:** Repile module
-   - **FreeScout URL:** the value the module shows
-   - **API key:** the value the module shows
-   - **Webhook secret:** the same secret as in step 2
-   - **Agent FreeScout user ID:** leave empty. The module only accepts writes as the Repile user and refuses any other user ID.
-4. Optional: under **Mailboxes**, tick the mailboxes Repile may work in. Leave them all unticked to include every mailbox.
-5. Back in FreeScout, click **Send a test event**. It confirms that Repile is reachable and the secret matches.
+1. In FreeScout, open **Manage → Settings → Repile**. The box at the top shows whether Repile is connected and the last event sent.
+2. **Where is Repile?** Enter your Repile address (it must start with `https://`) and click **Save**. Saving creates the Repile user.
+3. **Copy these into Repile.** In Repile, open **Settings → FreeScout**, pick **Repile module** as the connection and paste the **FreeScout URL**, **API key** and **Webhook secret** from this page with their Copy buttons. The module creates the webhook secret for you. Leave **Agent FreeScout user ID** empty; the module only accepts writes as the Repile user.
+4. Optional, under **What Repile can see**: pick **Only these** mailboxes, **Hide passwords and keys**, **Hide internal notes**.
+5. Click **Send test event** in the top box. It confirms that Repile is reachable and the secret matches.
+
+**Make a new key** and **Make a new secret** replace the value after asking; paste the new one into Repile afterwards.
 
 ### Keeping mailboxes away from Repile
 
-When some mailboxes are ticked under **Mailboxes**, the others are invisible to Repile. Their events are not sent, the API answers `404` for their conversations and leaves them out of lists and `/statuses`, and the Repile card, the "Ask Repile to check again" item and `@Repile` mentions do nothing there. A conversation moved into a ticked mailbox starts syncing on its next event; older history is not sent.
+When **Only these** is picked under **Mailboxes**, the others are invisible to Repile. Their events are not sent, the API answers `404` for their conversations and leaves them out of lists and `/statuses`, and the Repile card, the "Ask Repile to check again" item and `@Repile` mentions do nothing there. A conversation moved into a ticked mailbox starts syncing on its next event; older history is not sent.
 
 ### Private networks
 
-The Repile URL must use `https://` and point at a public address. If Repile runs on the same server or inside your own network, tick **Repile runs on a private network**. That allows local and private addresses, and plain `http://` for `localhost`. Without it, the module refuses to save or send to loopback, link-local (such as `169.254.169.254`) and private addresses.
+The Repile URL must use `https://` and point at a public address. If Repile runs on the same server or inside your own network, open **Repile runs on my own server** and tick **Allow a private or local address**. That allows local and private addresses, and plain `http://` for `localhost`. Without it, the module refuses to save or send to loopback, link-local (such as `169.254.169.254`) and private addresses.
 
 ### Sensitive data
 
-- **Redact credentials** (off by default) replaces passwords, tokens, API keys and logins inside links with `[redacted]` in everything sent to Repile: events and API responses. FreeScout's own copy is left as it is. It catches labelled values (`Password: ...`, `senha=...`, `API key: ...`), `https://user:pass@host` and common key formats (`sk-...`, `ghp_...`, AWS access keys). It is a best guess and misses credentials written as plain sentences, so ask customers to share logins through a secret-sharing link.
+- **Hide passwords and keys** (off by default) replaces passwords, tokens, API keys and logins inside links with `[redacted]` in everything sent to Repile: events and API responses. FreeScout's own copy is left as it is. It catches labelled values (`Password: ...`, `senha=...`, `API key: ...`), `https://user:pass@host` and common key formats (`sk-...`, `ghp_...`, AWS access keys). It is a best guess and misses credentials written as plain sentences, so ask customers to share logins through a secret-sharing link.
   When a labelled password is found, the username next to it (`Username:`, `User:`, `Email:`, `Login:`) is redacted too, and the login travels once in a separate `logins` field (`url`, `username`, `password`) on events and on `GET /conversations/{id}?_embed=threads`. Repile stores that field encrypted and never shows it to its AI; the agent gets it only as a file its scripts can read.
-- **Keep internal notes from Repile** (off by default) leaves notes out of `?_embed=threads`, except notes that mention `@Repile` and Repile's own notes.
+- **Hide internal notes** (off by default) leaves notes out of `?_embed=threads`, except notes that mention `@Repile` and Repile's own notes.
 
 Queued events hold only IDs. The ticket text is read when the event is sent, so it never sits in the `jobs` or `failed_jobs` tables, and a retry sends the current version.
 
@@ -84,7 +81,7 @@ If a conversation was deleted for good before its `convo.deleted` event went out
 | `convo.deleted` | The conversation is deleted |
 | `repile.mention` | A note mentions `@Repile` (adds `mention.text` and `mention.user`) |
 | `repile.recheck` | Someone picks **Ask Repile to check again** |
-| `repile.ping` | Someone presses **Send a test event** |
+| `repile.ping` | Someone presses **Send test event** |
 
 Repile answers with the thread it used (`threadId`, `threadPath`), which the panel links to. A `threadPath` must start with a single `/` and contain no `@`, backslash or whitespace, otherwise the link uses `/threads/{threadId}`.
 

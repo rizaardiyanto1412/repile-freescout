@@ -16,6 +16,31 @@ class Settings
         return trim((string) \Option::get('repile.webhook_secret', '', true, false));
     }
 
+    public static function webhookSecretOrCreate()
+    {
+        $secret = self::webhookSecret();
+
+        return $secret === '' ? self::regenerateWebhookSecret() : $secret;
+    }
+
+    public static function regenerateWebhookSecret()
+    {
+        $secret = bin2hex(random_bytes(24));
+        \Option::set('repile.webhook_secret', $secret);
+
+        return $secret;
+    }
+
+    public static function lastDelivery()
+    {
+        $last = \Option::get('repile.last_delivery', '', true, false);
+        if (is_string($last)) {
+            $last = json_decode($last, true);
+        }
+
+        return is_array($last) ? $last : null;
+    }
+
     public static function webhookUrl()
     {
         $base = self::repileUrl();
