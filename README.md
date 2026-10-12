@@ -93,14 +93,15 @@ Repile calls `{FreeScout URL}/repile/api` with the header `X-FreeScout-API-Key`:
 |---|---|
 | `GET /mailboxes` | Lists the mailboxes Repile may use |
 | `GET /conversations?mailboxId=&status=&page=` | Lists conversations |
-| `GET /conversations/{id}?_embed=threads` | Reads a conversation with its threads. Each thread lists its `attachments` (`id`, `fileName`, `mimeType`, `size`, `inline`), and inline images show in `text` as `[image: name, attachment id]` |
+| `GET /conversations/{id}?_embed=threads` | Reads a conversation with its threads. Each thread says if a person `edited` it in FreeScout and lists its `attachments` (`id`, `fileName`, `mimeType`, `size`, `inline`), and inline images show in `text` as `[image: name, attachment id]` |
 | `GET /conversations/{id}/attachments/{attachmentId}` | Downloads one attachment of that conversation. Attachments on hidden internal notes are refused |
 | `POST /conversations/{id}/threads` | Adds a note (`type: note`) or replaces Repile's draft reply (`type: message`, `state: draft`) |
 | `POST /conversations/{id}/threads/{threadId}/send` | Sends Repile's draft reply to the customer, optionally with new `text`. Only works on a draft the Repile user wrote and nobody edited in FreeScout |
+| `DELETE /conversations/{id}/threads/{threadId}` | Deletes Repile's draft reply. Only works on a draft the Repile user wrote and nobody edited in FreeScout |
 | `PUT /conversations/{id}` | Changes the status or assignee (`assignTo` must be someone who can be assigned in that mailbox) |
 | `POST /statuses` | Returns the status of up to 500 conversations at once |
 
-Repile never sends on its own. The send call exists for the **Press send** button on the draft card in Repile, so a person still sends every reply, either there or in FreeScout. It refuses any thread that is not Repile's own unedited draft.
+Repile never sends on its own. The send call exists for the **Press send** button on the draft card in Repile, so a person still sends every reply, either there or in FreeScout. The send and delete calls refuse any thread that is not Repile's own unedited draft.
 
 Every write is made as the Repile user. `user` (threads) and `byUser` (status and assignee) may be left out or set to the Repile user's ID; any other ID gets `422 {"message": "Repile can only act as the Repile user"}`. Notes and drafts that contain HTML are cleaned to paragraphs, line breaks, bold, italics, lists, code, quotes and `http(s)` links, so images, styles and hidden content never get stored.
 
