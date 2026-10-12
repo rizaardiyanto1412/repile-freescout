@@ -3,6 +3,7 @@
 namespace Modules\Repile\Tests\Feature;
 
 use App\Thread;
+use Modules\Repile\Support\AutoHeaders;
 use Modules\Repile\Support\Events;
 use Modules\Repile\Support\Payload;
 use Modules\Repile\Support\Redactor;
@@ -101,6 +102,41 @@ class OutgoingDataTest extends RepileTestCase
             ['mail me at bob@example.com'],
             ['the task-list ask'],
         ];
+    }
+
+    public function testEventsCarryOnlyTheAutomaticMailHeaders()
+    {
+        $headers = implode("\r\n", [
+            'Received: from mx.example.net by mail.example.com',
+            'From: Helpdesk <ticket@helpdesk.example>',
+            'To: support@example.com',
+            'Subject: [Ticket#42] Your request was received',
+            'Auto-Submitted: auto-replied',
+            'X-Autoreply: yes',
+            'Precedence: bulk',
+            'X-Spam-Score: 0.1',
+            'Message-ID: <ack-42@helpdesk.example>',
+        ]);
+        $auto = $this->thread($this->conversation, ['body' => '<p>We got your request.</p>', 'headers' => $headers]);
+        $plain = $this->thread($this->conversation, ['body' => '<p>Hi</p>', 'headers' => null]);
+
+        $event = Events::payload(Events::CREATED, $this->conversation->id, Events::thread($auto));
+        $this->assertSame([
+            ['name' => 'Auto-Submitted', 'value' => 'auto-replied'],
+            ['name' => 'X-Autoreply', 'value' => 'yes'],
+            ['name' => 'Precedence', 'value' => 'bulk'],
+        ], $event['thread']['autoHeaders']);
+        $this->assertStringNotContainsString('helpdesk.example', json_encode($event['thread']['autoHeaders']));
+        $this->assertSame([], Payload::thread($plain)['autoHeaders']);
+    }
+
+    public function testAutoHeadersUnfoldLongValues()
+    {
+        $this->assertSame(
+            [['name' => 'auto-submitted', 'value' => 'auto-generated; type=ack']],
+            AutoHeaders::from("Subject: Hi\nauto-submitted: auto-generated;\n\ttype=ack\nX-Autoreply-From: someone@example.com")
+        );
+        $this->assertSame([], AutoHeaders::from(''));
     }
 
     public function testRedactionOffKeepsPayloadsUnchanged()
