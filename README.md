@@ -78,6 +78,7 @@ If a conversation was deleted for good before its `convo.deleted` event went out
 | `convo.customer.reply.created` | The customer replies |
 | `convo.agent.reply.created` | A person sends a reply |
 | `convo.status` | The status changes |
+| `convo.assigned` | The conversation is assigned to someone else, or unassigned |
 | `convo.deleted` | The conversation is deleted |
 | `repile.mention` | A note mentions `@Repile` (adds `mention.text` and `mention.user`) |
 | `repile.recheck` | Someone picks **Ask Repile to check again** |
