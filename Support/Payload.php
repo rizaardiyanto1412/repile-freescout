@@ -98,6 +98,7 @@ class Payload
             'status' => self::statusName($thread->status),
             'createdAt' => self::time($thread->created_at),
             'createdBy' => $created_by,
+            'edited' => $thread->edited_by_user_id !== null,
             'body' => self::outgoingFor($thread->conversation, (string) $thread->body),
             'text' => self::outgoingFor($thread->conversation, self::text($thread)),
             'attachments' => self::attachments($thread),
