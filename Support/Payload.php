@@ -102,6 +102,7 @@ class Payload
             'body' => self::outgoingFor($thread->conversation, (string) $thread->body),
             'text' => self::outgoingFor($thread->conversation, self::text($thread)),
             'attachments' => self::attachments($thread),
+            'autoHeaders' => AutoHeaders::from($thread->headers),
         ];
     }
 
