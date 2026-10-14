@@ -230,26 +230,14 @@ class ApiController extends Controller
         if (!$user) {
             return response()->json(['message' => 'Repile can only act as the Repile user'], 422);
         }
-        $draft = Thread::where('id', (int) $threadId)
-            ->where('conversation_id', $conversation->id)
-            ->where('type', Thread::TYPE_MESSAGE)
-            ->where('state', Thread::STATE_DRAFT)
-            ->where('created_by_user_id', $user->id)
-            ->whereNull('edited_by_user_id')
-            ->first();
+        $draft = $this->ownDraft($conversation, $user, $threadId);
         if (!$draft) {
             return response()->json(['message' => 'Draft not found. It was sent, deleted or edited in FreeScout.'], 404);
         }
         $text = trim((string) $request->input('text', ''));
         $body = $text === '' ? $draft->body : Payload::htmlFromText($text);
 
-        $draft->delete();
-        $hasOtherDrafts = Thread::where('conversation_id', $conversation->id)
-            ->where('state', Thread::STATE_DRAFT)
-            ->exists();
-        if (!$hasOtherDrafts) {
-            $conversation->removeFromFolder(Folder::TYPE_DRAFTS);
-        }
+        $this->removeDraft($conversation, $draft);
         $conversation->createUserThread($user, $body, ['type' => Thread::TYPE_MESSAGE]);
         $sent = Thread::where('conversation_id', $conversation->id)
             ->where('type', Thread::TYPE_MESSAGE)
@@ -259,6 +247,48 @@ class ApiController extends Controller
             ->first();
 
         return response()->json(['id' => $sent ? (int) $sent->id : null], 201);
+    }
+
+    public function deleteDraft(Request $request, $id, $threadId)
+    {
+        $conversation = $this->findConversation($id);
+        if (!$conversation) {
+            return response()->json(['message' => 'Conversation not found'], 404);
+        }
+        $user = $this->actingUser($request->input('user'));
+        if (!$user) {
+            return response()->json(['message' => 'Repile can only act as the Repile user'], 422);
+        }
+        $draft = $this->ownDraft($conversation, $user, $threadId);
+        if (!$draft) {
+            return response()->json(['message' => 'Draft not found. It was sent, deleted or edited in FreeScout.'], 404);
+        }
+        $this->removeDraft($conversation, $draft);
+
+        return response('', 204);
+    }
+
+    private function ownDraft(Conversation $conversation, User $user, $threadId)
+    {
+        return Thread::where('id', (int) $threadId)
+            ->where('conversation_id', $conversation->id)
+            ->where('type', Thread::TYPE_MESSAGE)
+            ->where('state', Thread::STATE_DRAFT)
+            ->where('created_by_user_id', $user->id)
+            ->whereNull('edited_by_user_id')
+            ->first();
+    }
+
+    private function removeDraft(Conversation $conversation, Thread $draft)
+    {
+        $draft->delete();
+        $hasOtherDrafts = Thread::where('conversation_id', $conversation->id)
+            ->where('state', Thread::STATE_DRAFT)
+            ->exists();
+        if (!$hasOtherDrafts) {
+            $conversation->removeFromFolder(Folder::TYPE_DRAFTS);
+        }
+        $conversation->mailbox->updateFoldersCounters(Folder::TYPE_DRAFTS);
     }
 
     private function replaceDraft(Conversation $conversation, User $user, $body)

@@ -84,6 +84,39 @@ class ApiWritesTest extends RepileTestCase
         $this->api('POST', $this->threadsUri().'/'.$draftId.'/send')->assertStatus(404);
     }
 
+    public function testDeleteRemovesOnlyTheBotsUneditedDraft()
+    {
+        $edited = $this->api('POST', $this->threadsUri(), ['type' => 'message', 'state' => 'draft', 'text' => 'Edited answer'])
+            ->assertStatus(201)->json()['id'];
+        Thread::where('id', $edited)->update(['edited_by_user_id' => $this->admin->id]);
+        $draftId = $this->api('POST', $this->threadsUri(), ['type' => 'message', 'state' => 'draft', 'text' => 'Old answer'])
+            ->assertStatus(201)->json()['id'];
+        $human = $this->thread($this->conversation, [
+            'type' => Thread::TYPE_MESSAGE,
+            'state' => Thread::STATE_DRAFT,
+            'created_by_user_id' => $this->admin->id,
+            'created_by_customer_id' => null,
+            'user_id' => $this->admin->id,
+            'source_via' => Thread::PERSON_USER,
+            'body' => 'My own draft',
+        ]);
+
+        $listed = collect($this->api('GET', $this->conversationUri().'?_embed=threads')->json()['_embedded']['threads'])->keyBy('id');
+        $this->assertTrue($listed[$edited]['edited']);
+        $this->assertFalse($listed[$draftId]['edited']);
+
+        $this->api('DELETE', $this->threadsUri().'/'.$human->id)->assertStatus(404);
+        $this->api('DELETE', $this->threadsUri().'/'.$edited)->assertStatus(404);
+        $this->api('DELETE', $this->threadsUri().'/'.$draftId, ['user' => $this->admin->id])->assertStatus(422);
+
+        $this->api('DELETE', $this->threadsUri().'/'.$draftId)->assertStatus(204);
+        $this->assertNull(Thread::find($draftId));
+        $this->assertNotNull(Thread::find($human->id));
+        $this->assertNotNull(Thread::find($edited));
+
+        $this->api('DELETE', $this->threadsUri().'/'.$draftId)->assertStatus(404);
+    }
+
     public function testStatusChangesAreCreditedToTheBotOnly()
     {
         $bot = $this->bot();
