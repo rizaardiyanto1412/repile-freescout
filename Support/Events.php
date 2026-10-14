@@ -15,6 +15,7 @@ class Events
     public const AGENT_REPLY = 'convo.agent.reply.created';
     public const STATUS = 'convo.status';
     public const DELETED = 'convo.deleted';
+    public const ASSIGNED = 'convo.assigned';
     public const MENTION = 'repile.mention';
     public const RECHECK = 'repile.recheck';
 

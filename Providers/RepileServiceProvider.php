@@ -134,6 +134,10 @@ class RepileServiceProvider extends ServiceProvider
             Events::send(Events::STATUS, $conversation);
         }, 20, 4);
 
+        \Eventy::addAction('conversation.user_changed', function ($conversation, $user, $prev_user_id) {
+            Events::send(Events::ASSIGNED, $conversation);
+        }, 20, 3);
+
         \Eventy::addAction('conversation.deleted', function ($conversation, $user) {
             Events::send(Events::DELETED, $conversation);
         }, 20, 2);
